@@ -1,0 +1,24 @@
+#!/bin/bash
+
+# Copyright (c) Huawei Technologies Co., Ltd. 2018-2019. All rights reserved.
+# Description: This shell script is used to apply patches for the project
+# Author: jingrui@huawei.com
+# Create: 2019-03-02
+
+pkg=runc-1.0.0-rc3
+cwd=$PWD
+src=$cwd/$pkg
+
+unzip $pkg.zip
+
+series=$cwd/series.conf
+while IPF= read -r line
+do
+    if [[ "$line" =~ ^0.* ]]; then
+        cd $src && patch -p1 < $cwd/patch/$line
+    fi
+done <"$series"
+
+cd $cwd
+cp -rf $src/* .
+rm -rf runc-1.0.0-rc3
