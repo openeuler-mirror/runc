@@ -2,11 +2,16 @@
 
 Name: docker-runc
 Version: 1.0.0.rc3
-Release: 104
+Release: 105
 Summary: runc is a CLI tool for spawning and running containers according to the OCI specification.
 
 License: ASL 2.0
-Source: %{name}.tar.gz
+Source0: runc-1.0.0-rc3.zip
+Source1: patch.tar.gz
+Source2: apply-patch
+Source3: series.conf
+Source4: git-commit
+Source5: gen-commit.sh 
 
 URL: https://www.opencontainers.org/
 Vendor: OCI
@@ -18,10 +23,14 @@ BuildRequires: golang >= 1.8.3 glibc-static make libseccomp-devel libseccomp-sta
 runc is a CLI tool for spawning and running containers according to the OCI specification.
 
 %prep
-%setup -c -n runc
+cp %{SOURCE0} .
+cp %{SOURCE1} .
+cp %{SOURCE2} .
+cp %{SOURCE3} .
+cp %{SOURCE4} .
 
 %install
-./apply-patch 
+sh ./apply-patch 
 
 mkdir -p .gopath/src/github.com/opencontainers
 export GOPATH=`pwd`/.gopath
