@@ -5,7 +5,7 @@
 # Author: jingrui@huawei.com
 # Create: 2019-03-02
 
-pkg=runc-1.0.0-rc3
+pkg=v1.0.0-rc3
 cwd=$PWD
 src=$cwd/$pkg
 
