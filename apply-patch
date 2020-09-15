@@ -5,11 +5,11 @@
 # Author: jingrui@huawei.com
 # Create: 2019-03-02
 
-pkg=v1.0.0-rc3
+pkg=runc-1.0.0-rc3
 cwd=$PWD
 src=$cwd/$pkg
 
-unzip $pkg.zip
+unzip v1.0.0-rc3.zip
 if [ ! -d patch ];then
     tar -xzf patch.tar.gz
 fi
