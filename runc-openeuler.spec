@@ -2,7 +2,7 @@
 
 Name: docker-runc
 Version: 1.0.0.rc3
-Release: 104
+Release: 200
 Summary: runc is a CLI tool for spawning and running containers according to the OCI specification.
 
 License: ASL 2.0
@@ -40,3 +40,40 @@ install -p -m 755 runc $RPM_BUILD_ROOT/%{_bindir}/runc
 %{_bindir}/runc
 
 %changelog
+* Wed Feb 9 2021 xiadanni<xiadanni1@huawei.com> - 1.0.0.rc3-200
+- Type:bugfix
+- ID:NA
+- SUG:NA
+- DESC:sync bugfix and bump version to 200, bugfix include
+       1. add cpu and memory info when print cgroup info
+       2. fix freezing race
+
+* Wed Nov 25 2020 xiadanni<xiadanni1@huawei.com> - 1.0.0.rc3-104
+- Type:bugfix
+- ID:NA
+- SUG:NA
+- DESC:don't deny all devices when update cgroup resource
+       do not permit /proc mounts to non-directories
+       fix permission denied
+
+* Fri Mar 20 2020 xiadanni<xiadanni1@huawei.com> - 1.0.0.rc3-103
+- Type:bugfix
+- ID:NA
+- SUG:NA
+- DESC:pass back the pid of runc:[1:CHILD] so we can wait on it
+
+* Thu Mar 5 2020 xiadanni<xiadanni1@huawei.com> - 1.0.0.rc3-102
+- Type:bugfix
+- ID:NA
+- SUG:NA
+- DESC:fixes config.Namespaces is empty when accessed
+       write freezer state after every state check
+       may kill other process when container has been stopped
+       fix cgroup hugetlb size prefix for kB
+       check nil pointers in cgroup manager
+
+* Wed Jan 1 2020 xiadanni<xiadanni1@huawei.com> - 1.0.0.rc3-101
+- Type:requirement
+- ID:NA 
+- SUG:NA
+- DESC:package init
