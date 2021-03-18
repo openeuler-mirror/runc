@@ -29,7 +29,7 @@ index 43d15bf..fcf34ea 100644
 +	CGO_CPPFLAGS="-fstack-protector-strong -fPIE" \
 +	CGO_LDFLAGS_ALLOW='-Wl,-z,relro,-z,now' \
 +	CGO_LDFLAGS="-Wl,-z,relro,-z,now -Wl,-z,noexecstack" \
-+	go build -buildmode=pie -i -tags "$(BUILDTAGS) cgo static_build" -ldflags '-extldflags=-static' -ldflags $(LD_FLAGS) -o runc .
++	go build -buildmode=pie -tags "$(BUILDTAGS) cgo static_build" -ldflags '-extldflags=-static' -ldflags $(LD_FLAGS) -o runc .
  
  release:
  	@flag_list=(seccomp selinux apparmor static); \
