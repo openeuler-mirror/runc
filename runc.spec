@@ -4,7 +4,7 @@
 
 Name: docker-runc
 Version: 1.0.0.rc3
-Release: 114
+Release: 115
 Summary: runc is a CLI tool for spawning and running containers according to the OCI specification.
 
 License: ASL 2.0
@@ -35,6 +35,7 @@ cp %{SOURCE4} .
 sh ./apply-patch 
 
 mkdir -p .gopath/src/github.com/opencontainers
+export GO111MODULE=off
 export GOPATH=`pwd`/.gopath
 ln -sf `pwd` .gopath/src/github.com/opencontainers/runc
 cd .gopath/src/github.com/opencontainers/runc
@@ -52,6 +53,19 @@ install -p -m 755 runc $RPM_BUILD_ROOT/%{_bindir}/runc
 %{_bindir}/runc
 
 %changelog
+* Tue Jan 26 2022 songyanting <songyanting@huawei.com> - 1.0.0.rc3-115
+- Type:bugfix
+- CVE:NA
+- SUG:NA
+- DESC:sync bugfix, include
+       1. add check in spec
+       2. add mount destination validation(fix CVE-2021-30465)
+       3. fix backport patch apply ignored
+       4. optimize nsexec logging
+       5. improve log for debugging
+       6. fix cgroup info print error
+       7. support unit test
+
 * Tue Oct 26 2021 chenchen <chen_aka_jan@163.com> - 1.0.0.rc3-114
 - change the spec file name to be the same as the repo name
 
