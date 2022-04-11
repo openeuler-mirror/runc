@@ -1,9 +1,10 @@
 #needsrootforbuild
+%global _bindir /usr/local/bin
 %global debug_package %{nil}
 
 Name: docker-runc
 Version: 1.0.0.rc3
-Release: 116
+Release: 117
 Summary: runc is a CLI tool for spawning and running containers according to the OCI specification.
 
 License: ASL 2.0
@@ -52,6 +53,9 @@ install -p -m 755 runc $RPM_BUILD_ROOT/%{_bindir}/runc
 %{_bindir}/runc
 
 %changelog
+* Mon Apr 11 2022 fushanqing <fushanqing@kylinos.cn> - 1.0.0.rc3-117
+- add macro
+
 * Thu Feb 10 2022 fushanqing <fushanqing@kylinos.cn> - 1.0.0.rc3-116
 - remove "%global _bindir /usr/local/bin"
 
