@@ -4,7 +4,7 @@
 
 Name: docker-runc
 Version: 1.0.0.rc3
-Release: 302
+Release: 303
 Summary: runc is a CLI tool for spawning and running containers according to the OCI specification.
 
 License: ASL 2.0
@@ -53,6 +53,12 @@ install -p -m 755 runc $RPM_BUILD_ROOT/%{_bindir}/runc
 %{_bindir}/runc
 
 %changelog
+* Tue Aug  9 2022 zhongjiawei <zhongjiawei1@huawei.com> - 1.0.0.rc3-303
+- Type:bugfix
+- ID:NA
+- SUG:NA
+- DESC:fix connect container failed when reading partially written state.json content
+
 * Fri Aug 5 2022 zhongjiawei<zhongjiawei1@huawei.com> - 1.0.0.rc3-302
 - Type:bugfix
 - CVE:NA
