@@ -45,7 +45,7 @@ install -p -m 755 runc $RPM_BUILD_ROOT/%{_bindir}/runc
 - Type:bugfix
 - CVE:NA
 - SUG:NA
-- DESC:change Uamsk to 0022
+- DESC:change umask to 0022
 
 * Thu Jun 03 2021 xiadanni<xiadanni1@huawei.com> - 1.0.0.rc3-204
 - Type:CVE
