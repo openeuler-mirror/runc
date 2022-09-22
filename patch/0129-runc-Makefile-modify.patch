@@ -1,0 +1,58 @@
+From 2445e4d3c1ba55f1592c5bc2295a0a497c10f08d Mon Sep 17 00:00:00 2001
+From: zhongjiawei <zhongjiawei1@huawei.com>
+Date: Wed, 21 Sep 2022 15:29:27 +0800
+Subject: [PATCH] runc:Makefile modify
+
+Signed-off-by: zhongjiawei <zhongjiawei1@huawei.com>
+---
+ Makefile | 19 ++++++++++++++-----
+ 1 file changed, 14 insertions(+), 5 deletions(-)
+
+diff --git a/Makefile b/Makefile
+index b24c22b..c2f9b42 100644
+--- a/Makefile
++++ b/Makefile
+@@ -10,8 +10,7 @@ GIT_BRANCH_CLEAN := $(shell echo $(GIT_BRANCH) | sed -e "s/[^[:alnum:]]/-/g")
+ RUNC_IMAGE := runc_dev$(if $(GIT_BRANCH_CLEAN),:$(GIT_BRANCH_CLEAN))
+ PROJECT := github.com/opencontainers/runc
+ BUILDTAGS := seccomp
+-COMMIT_NO := $(shell git rev-parse HEAD 2> /dev/null || true)
+-COMMIT := $(if $(shell git status --porcelain --untracked-files=no),"${COMMIT_NO}-dirty","${COMMIT_NO}")
++COMMIT := $(shell cat ./git-commit | head -c 40)
+ 
+ MAN_DIR := $(CURDIR)/man/man8
+ MAN_PAGES = $(shell ls $(MAN_DIR)/*.8)
+@@ -40,10 +39,17 @@ recvtty: contrib/cmd/recvtty/recvtty
+ contrib/cmd/recvtty/recvtty: $(SOURCES)
+ 	go build -i -ldflags " -buildid=IdByIsula ${BEP_FLAG} -X main.gitCommit=${COMMIT} -X main.version=${VERSION}" -tags "$(BUILDTAGS)" -o contrib/cmd/recvtty/recvtty ./contrib/cmd/recvtty
+ 
++LD_FLAGS='-buildid=none -tmpdir=/tmp/bep-runc -linkmode=external -extldflags=-Wl,-z,relro,-z,now \
++          -X main.gitCommit=${COMMIT} -X main.version=${VERSION}'
++
+ static: $(SOURCES)
+-	mkdir -p ${BEP_DIR}
+-	CGO_ENABLED=1 go build -i -tags "$(BUILDTAGS) cgo static_build" -ldflags "-w -buildid=IdByIsula -extldflags -static  ${BEP_FLAG}  -X main.gitCommit=${COMMIT} -X main.version=${VERSION}" -o runc .
+-	CGO_ENABLED=1 go build -i -tags "$(BUILDTAGS) cgo static_build" -ldflags "-w -buildid=IdByIsula -extldflags -static  ${BEP_FLAG}  -X main.gitCommit=${COMMIT} -X main.version=${VERSION}" -o contrib/cmd/recvtty/recvtty ./contrib/cmd/recvtty
++	rm -rf /tmp/bep-runc && mkdir /tmp/bep-runc
++	CGO_ENABLED=1 \
++	CGO_CFLAGS="-fstack-protector-strong -fPIE -D_FORTIFY_SOURCE=2 -O2" \
++	CGO_CPPFLAGS="-fstack-protector-strong -fPIE -D_FORTIFY_SOURCE=2 -O2" \
++	CGO_LDFLAGS_ALLOW='-Wl,-z,relro,-z,now' \
++	CGO_LDFLAGS="-Wl,-z,relro,-z,now -Wl,-z,noexecstack" \
++	go build -buildmode=pie -tags "$(BUILDTAGS) cgo static_build" -ldflags '-extldflags=-static' -ldflags $(LD_FLAGS) -o runc .
+ 
+ release:
+ 	@flag_list=(seccomp selinux apparmor static); \
+@@ -83,6 +89,9 @@ man:
+ runcimage:
+ 	docker build -t $(RUNC_IMAGE) .
+ 
++check:
++	go test -v ./libcontainer
++
+ test:
+ 	make unittest integration rootlessintegration
+ 
+-- 
+2.30.0
+
