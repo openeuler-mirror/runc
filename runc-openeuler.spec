@@ -1,10 +1,10 @@
 #needsrootforbuild
-%global _bindir /usr/local/bin
+%global _bindir /usr/bin
 %global debug_package %{nil}
 
 Name: docker-runc
 Version: 1.0.0.rc3
-Release: 304
+Release: 305
 Summary: runc is a CLI tool for spawning and running containers according to the OCI specification.
 
 License: ASL 2.0
@@ -53,6 +53,12 @@ install -p -m 755 runc $RPM_BUILD_ROOT/%{_bindir}/runc
 %{_bindir}/runc
 
 %changelog
+* Wed Sep 28 2022 zhongjiawei<zhongjiawei1@huawei.com> - 1.0.0.rc3-305
+- Type:bugfix
+- CVE:NA
+- SUG:NA
+- DESC:move install path to /usr/bin
+
 * Thu Sep 22 2022 zhongjiawei<zhongjiawei1@huawei.com> - 1.0.0.rc3-304
 - Type:bugfix
 - CVE:NA
@@ -77,7 +83,7 @@ install -p -m 755 runc $RPM_BUILD_ROOT/%{_bindir}/runc
 - SUG:NA
 - DESC:do not set inheritable capabilities
 
-* Tue Jan 26 2022 songyanting <songyanting@huawei.com> - 1.0.0.rc3-300
+* Wed Jan 26 2022 songyanting <songyanting@huawei.com> - 1.0.0.rc3-300
 - Type:bugfix
 - CVE:NA
 - SUG:NA
