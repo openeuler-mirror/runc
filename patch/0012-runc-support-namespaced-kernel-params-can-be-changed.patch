@@ -1,0 +1,76 @@
+From eda4f5b5bcf9ca36a2ba3250b366ad1fb4bab28c Mon Sep 17 00:00:00 2001
+From: zhong-jiawei-1 <zhongjiawei1@huawei.com>
+Date: Tue, 18 Oct 2022 17:18:47 +0800
+Subject: [PATCH] runc:support namespaced kernel params can be changed in
+ system container
+
+---
+ runc-1.1.3/libcontainer/rootfs_linux.go       | 26 +++++++++++++++++++
+ .../libcontainer/standard_init_linux.go       |  7 +++++
+ 2 files changed, 33 insertions(+)
+
+diff --git a/runc-1.1.3/libcontainer/rootfs_linux.go b/runc-1.1.3/libcontainer/rootfs_linux.go
+index 3cfd2bf..4dbe9f4 100644
+--- a/runc-1.1.3/libcontainer/rootfs_linux.go
++++ b/runc-1.1.3/libcontainer/rootfs_linux.go
+@@ -417,6 +417,9 @@ func mountToRootfs(m *configs.Mount, c *mountConfig) error {
+ 		} else if fi.Mode()&os.ModeDir == 0 {
+ 			return fmt.Errorf("filesystem %q must be mounted on ordinary directory", m.Device)
+ 		}
++		if strings.HasPrefix(m.Destination, "/proc/sys/") {
++			return nil
++		}
+ 		if err := os.MkdirAll(dest, 0o755); err != nil {
+ 			return err
+ 		}
+@@ -1009,6 +1012,29 @@ func readonlyPath(path string) error {
+ 	return nil
+ }
+ 
++// remountReadWrite will bind over the top of an existing path and ensure that it is read-write.
++func remountReadWrite(path string) error {
++	for i := 0; i < 5; i++ {
++		if err := syscall.Mount("", path, "", syscall.MS_REMOUNT, ""); err != nil && !os.IsNotExist(err) {
++			switch err {
++			case syscall.EINVAL:
++				// Probably not a mountpoint, use bind-mount
++				if err := syscall.Mount(path, path, "", syscall.MS_BIND, ""); err != nil {
++					return err
++				}
++				return syscall.Mount(path, path, "", syscall.MS_BIND|syscall.MS_REMOUNT|syscall.MS_REC|defaultMountFlags, "")
++			case syscall.EBUSY:
++				time.Sleep(100 * time.Millisecond)
++				continue
++			default:
++				return err
++			}
++		}
++		return nil
++	}
++	return fmt.Errorf("unable to mount %s as readwrite max retries reached", path)
++}
++
+ // remountReadonly will remount an existing mount point and ensure that it is read-only.
+ func remountReadonly(m *configs.Mount) error {
+ 	var (
+diff --git a/runc-1.1.3/libcontainer/standard_init_linux.go b/runc-1.1.3/libcontainer/standard_init_linux.go
+index ab553ef..0dd51b2 100644
+--- a/runc-1.1.3/libcontainer/standard_init_linux.go
++++ b/runc-1.1.3/libcontainer/standard_init_linux.go
+@@ -141,6 +141,13 @@ func (l *linuxStandardInit) Init() error {
+ 			return fmt.Errorf("can't make %q read-only: %w", path, err)
+ 		}
+ 	}
++	for _, m := range l.config.Config.Mounts {
++		if m.Flags&syscall.MS_RDONLY == 0 && m.Device == "proc" && strings.HasPrefix(m.Destination, "/proc/sys/") {
++			if err := remountReadWrite(m.Destination); err != nil {
++				return err
++			}
++		}
++	}
+ 	for _, path := range l.config.Config.MaskPaths {
+ 		if err := maskPath(path, l.config.Config.MountLabel); err != nil {
+ 			return fmt.Errorf("can't mask path %s: %w", path, err)
+-- 
+2.30.0
+

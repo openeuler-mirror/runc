@@ -1,0 +1,249 @@
+From ebee018ddc5b1d1d9d5484fb2db40123599eb4e8 Mon Sep 17 00:00:00 2001
+From: zhongjiawei <zhongjiawei1@huawei.com>
+Date: Mon, 17 Oct 2022 17:54:20 +0800
+Subject: [PATCH] runc:Add file fds limit
+
+---
+ runc-1.1.3/events.go                          |  3 +
+ runc-1.1.3/libcontainer/cgroups/fs/files.go   | 79 +++++++++++++++++++
+ runc-1.1.3/libcontainer/cgroups/fs/fs.go      |  1 +
+ runc-1.1.3/libcontainer/cgroups/stats.go      |  8 ++
+ runc-1.1.3/libcontainer/cgroups/systemd/v1.go |  1 +
+ .../libcontainer/configs/cgroup_linux.go      |  3 +
+ .../libcontainer/specconv/spec_linux.go       |  4 +
+ runc-1.1.3/types/events.go                    |  6 ++
+ .../runtime-spec/specs-go/config.go           |  8 ++
+ 9 files changed, 113 insertions(+)
+ create mode 100644 runc-1.1.3/libcontainer/cgroups/fs/files.go
+
+diff --git a/runc-1.1.3/events.go b/runc-1.1.3/events.go
+index 6cdc01c..94712e3 100644
+--- a/runc-1.1.3/events.go
++++ b/runc-1.1.3/events.go
+@@ -120,6 +120,9 @@ func convertLibcontainerStats(ls *libcontainer.Stats) *types.Stats {
+ 	s.Pids.Current = cg.PidsStats.Current
+ 	s.Pids.Limit = cg.PidsStats.Limit
+ 
++	s.Files.Usage = cg.FilesStats.Usage
++	s.Files.Limit = cg.FilesStats.Limit
++
+ 	s.CPU.Usage.Kernel = cg.CpuStats.CpuUsage.UsageInKernelmode
+ 	s.CPU.Usage.User = cg.CpuStats.CpuUsage.UsageInUsermode
+ 	s.CPU.Usage.Total = cg.CpuStats.CpuUsage.TotalUsage
+diff --git a/runc-1.1.3/libcontainer/cgroups/fs/files.go b/runc-1.1.3/libcontainer/cgroups/fs/files.go
+new file mode 100644
+index 0000000..3315cda
+--- /dev/null
++++ b/runc-1.1.3/libcontainer/cgroups/fs/files.go
+@@ -0,0 +1,79 @@
++/*
++Copyright (c) Huawei Technologies Co., Ltd. 2017-2019. All rights reserved.
++Use of this source code is governed by Apache-2.0
++license that can be found in the LICENSE file.
++Description: files cgroup common functions
++Author: yangshukui
++Create: 2017-09-18
++*/
++
++package fs
++
++import (
++	"fmt"
++	"strconv"
++
++	"github.com/opencontainers/runc/libcontainer/cgroups"
++	"github.com/opencontainers/runc/libcontainer/configs"
++	"path/filepath"
++)
++
++type FilesGroup struct {
++}
++
++func (s *FilesGroup) Name() string {
++	return "files"
++}
++
++func (s *FilesGroup) Apply(d *cgroupData) error {
++	_, err := d.join("files")
++	if err != nil && !cgroups.IsNotFound(err) {
++		return err
++	}
++	return nil
++}
++
++func (s *FilesGroup) Set(path string, cgroup *configs.Cgroup) error {
++	if cgroup.Resources.FilesLimit != 0 {
++		// "max" is the fallback value.
++		limit := "max"
++		if cgroup.Resources.FilesLimit > 0 {
++			limit = strconv.FormatInt(cgroup.Resources.FilesLimit, 10)
++		}
++
++		if err := writeFile(path, "files.limit", limit); err != nil {
++			return err
++		}
++	}
++
++	return nil
++}
++
++func (s *FilesGroup) Remove(d *cgroupData) error {
++	return removePath(d.path("files"))
++}
++
++func (s *FilesGroup) GetStats(path string, stats *cgroups.Stats) error {
++	usage, err := getCgroupParamUint(path, "files.usage")
++	if err != nil {
++		return fmt.Errorf("failed to parse files.usage - %s", err)
++	}
++
++	maxString, err := getCgroupParamString(path, "files.limit")
++	if err != nil {
++		return fmt.Errorf("failed to parse files.limit - %s", err)
++	}
++
++	// Default if files.limit == "max" is 0 -- which represents "no limit".
++	var max uint64
++	if maxString != "max" {
++		max, err = parseUint(maxString, 10, 64)
++		if err != nil {
++			return fmt.Errorf("failed to parse files.limit -- unable to parse %q as a uint from Cgroup file %q", maxString, filepath.Join(path, "file.limits"))
++		}
++	}
++
++	stats.FilesStats.Usage = usage
++	stats.FilesStats.Limit = max
++	return nil
++}
+diff --git a/runc-1.1.3/libcontainer/cgroups/fs/fs.go b/runc-1.1.3/libcontainer/cgroups/fs/fs.go
+index fb4fcc7..59b6dff 100644
+--- a/runc-1.1.3/libcontainer/cgroups/fs/fs.go
++++ b/runc-1.1.3/libcontainer/cgroups/fs/fs.go
+@@ -20,6 +20,7 @@ var subsystems = []subsystem{
+ 	&CpuGroup{},
+ 	&CpuacctGroup{},
+ 	&PidsGroup{},
++	&FilesGroup{},
+ 	&BlkioGroup{},
+ 	&HugetlbGroup{},
+ 	&NetClsGroup{},
+diff --git a/runc-1.1.3/libcontainer/cgroups/stats.go b/runc-1.1.3/libcontainer/cgroups/stats.go
+index 40a81dd..8f1d4ce 100644
+--- a/runc-1.1.3/libcontainer/cgroups/stats.go
++++ b/runc-1.1.3/libcontainer/cgroups/stats.go
+@@ -116,6 +116,13 @@ type PidsStats struct {
+ 	Limit uint64 `json:"limit,omitempty"`
+ }
+ 
++type FilesStats struct {
++	// number of pids in the cgroup
++	Usage uint64 `json:"usage,omitempty"`
++	// active pids hard limit
++	Limit uint64 `json:"limit,omitempty"`
++}
++
+ type BlkioStatEntry struct {
+ 	Major uint64 `json:"major,omitempty"`
+ 	Minor uint64 `json:"minor,omitempty"`
+@@ -160,6 +167,7 @@ type Stats struct {
+ 	CPUSetStats CPUSetStats `json:"cpuset_stats,omitempty"`
+ 	MemoryStats MemoryStats `json:"memory_stats,omitempty"`
+ 	PidsStats   PidsStats   `json:"pids_stats,omitempty"`
++	FilesStats  FilesStats  `json:"files_stats,omitempty"`
+ 	BlkioStats  BlkioStats  `json:"blkio_stats,omitempty"`
+ 	// the map is in the format "size of hugepage: stats of the hugepage"
+ 	HugetlbStats map[string]HugetlbStats `json:"hugetlb_stats,omitempty"`
+diff --git a/runc-1.1.3/libcontainer/cgroups/systemd/v1.go b/runc-1.1.3/libcontainer/cgroups/systemd/v1.go
+index a74a05a..19d1099 100644
+--- a/runc-1.1.3/libcontainer/cgroups/systemd/v1.go
++++ b/runc-1.1.3/libcontainer/cgroups/systemd/v1.go
+@@ -63,6 +63,7 @@ var legacySubsystems = []subsystem{
+ 	&fs.CpuGroup{},
+ 	&fs.CpuacctGroup{},
+ 	&fs.PidsGroup{},
++	&fs.FilesGroup{},
+ 	&fs.BlkioGroup{},
+ 	&fs.HugetlbGroup{},
+ 	&fs.PerfEventGroup{},
+diff --git a/runc-1.1.3/libcontainer/configs/cgroup_linux.go b/runc-1.1.3/libcontainer/configs/cgroup_linux.go
+index 2d4a898..8cbc154 100644
+--- a/runc-1.1.3/libcontainer/configs/cgroup_linux.go
++++ b/runc-1.1.3/libcontainer/configs/cgroup_linux.go
+@@ -87,6 +87,9 @@ type Resources struct {
+ 	// Process limit; set <= `0' to disable limit.
+ 	PidsLimit int64 `json:"pids_limit"`
+ 
++	// Process open files limit.
++	FilesLimit int64 `json:"files_limit"`
++
+ 	// Specifies per cgroup weight, range is from 10 to 1000.
+ 	BlkioWeight uint16 `json:"blkio_weight"`
+ 
+diff --git a/runc-1.1.3/libcontainer/specconv/spec_linux.go b/runc-1.1.3/libcontainer/specconv/spec_linux.go
+index c7ca4c8..19dd947 100644
+--- a/runc-1.1.3/libcontainer/specconv/spec_linux.go
++++ b/runc-1.1.3/libcontainer/specconv/spec_linux.go
+@@ -747,6 +747,10 @@ func CreateCgroupConfig(opts *CreateOpts, defaultDevs []*devices.Device) (*confi
+ 			if r.Pids != nil {
+ 				c.Resources.PidsLimit = r.Pids.Limit
+ 			}
++			if r.Files != nil && r.Files.Limit != nil {
++				c.Resources.FilesLimit = *r.Files.Limit
++			}
++
+ 			if r.BlockIO != nil {
+ 				if r.BlockIO.Weight != nil {
+ 					c.Resources.BlkioWeight = *r.BlockIO.Weight
+diff --git a/runc-1.1.3/types/events.go b/runc-1.1.3/types/events.go
+index 81bde82..1fdff8f 100644
+--- a/runc-1.1.3/types/events.go
++++ b/runc-1.1.3/types/events.go
+@@ -15,6 +15,7 @@ type Stats struct {
+ 	CPUSet            CPUSet              `json:"cpuset"`
+ 	Memory            Memory              `json:"memory"`
+ 	Pids              Pids                `json:"pids"`
++	Files             files               `json:"files"`
+ 	Blkio             Blkio               `json:"blkio"`
+ 	Hugetlb           map[string]Hugetlb  `json:"hugetlb"`
+ 	IntelRdt          IntelRdt            `json:"intel_rdt"`
+@@ -50,6 +51,11 @@ type Pids struct {
+ 	Limit   uint64 `json:"limit,omitempty"`
+ }
+ 
++type files struct {
++	Usage uint64 `json:"usage,omitempty"`
++	Limit uint64 `json:"limit,omitempty"`
++}
++
+ type Throttling struct {
+ 	Periods          uint64 `json:"periods,omitempty"`
+ 	ThrottledPeriods uint64 `json:"throttledPeriods,omitempty"`
+diff --git a/runc-1.1.3/vendor/github.com/opencontainers/runtime-spec/specs-go/config.go b/runc-1.1.3/vendor/github.com/opencontainers/runtime-spec/specs-go/config.go
+index 6a7a91e..e8143b2 100644
+--- a/runc-1.1.3/vendor/github.com/opencontainers/runtime-spec/specs-go/config.go
++++ b/runc-1.1.3/vendor/github.com/opencontainers/runtime-spec/specs-go/config.go
+@@ -336,6 +336,12 @@ type LinuxPids struct {
+ 	Limit int64 `json:"limit"`
+ }
+ 
++// Files for Linux cgroup 'files' resource management (https://lwn.net/Articles/604129/)
++type Files struct {
++	// Maximum number of open files".
++	Limit *int64 `json:"limit,omitempty"`
++}
++
+ // LinuxNetwork identification and priority configuration
+ type LinuxNetwork struct {
+ 	// Set class identifier for container's network packets
+@@ -362,6 +368,8 @@ type LinuxResources struct {
+ 	CPU *LinuxCPU `json:"cpu,omitempty"`
+ 	// Task resource restriction configuration.
+ 	Pids *LinuxPids `json:"pids,omitempty"`
++	// Files resource restriction configuration.
++	Files *Files `json:"files,omitempty"`
+ 	// BlockIO restriction configuration
+ 	BlockIO *LinuxBlockIO `json:"blockIO,omitempty"`
+ 	// Hugetlb limit (in bytes)
+-- 
+2.30.0
+

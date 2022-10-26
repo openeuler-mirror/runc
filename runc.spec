@@ -3,12 +3,16 @@
 
 Name: docker-runc
 Version: 1.1.3
-Release: 4
+Release: 5
 Summary: runc is a CLI tool for spawning and running containers according to the OCI specification.
 
 License: ASL 2.0
 Source0: https://github.com/opencontainers/runc/archive/refs/tags/v1.1.3.tar.gz
-
+Source1: apply-patch
+Source2: series.conf
+Source3: git-commit
+Source4: gen-commit.sh
+Source5: patch.tar.gz
 
 URL: https://www.opencontainers.org/
 Vendor: OCI
@@ -20,9 +24,17 @@ BuildRequires: golang >= 1.8.3 glibc-static make libseccomp-devel libseccomp-sta
 runc is a CLI tool for spawning and running containers according to the OCI specification.
 
 %prep
-%autosetup -p1 -n runc-1.1.3
+cp %{SOURCE0} .
+cp %{SOURCE1} .
+cp %{SOURCE2} .
+cp %{SOURCE3} .
+cp %{SOURCE4} .
+cp %{SOURCE5} .
 
-%build
+
+%install
+sh ./apply-patch
+
 mkdir -p .gopath/src/github.com/opencontainers
 export GO111MODULE=off
 export GOPATH=`pwd`/.gopath
@@ -32,7 +44,6 @@ make BUILDTAGS="seccomp selinux" static
 rm -rf .gopath
 strip runc
 
-%install
 install -d $RPM_BUILD_ROOT/%{_bindir}
 install -p -m 755 runc $RPM_BUILD_ROOT/%{_bindir}/runc
 
@@ -43,6 +54,12 @@ install -p -m 755 runc $RPM_BUILD_ROOT/%{_bindir}/runc
 %{_bindir}/runc
 
 %changelog
+* Fri Nov 4 2022 zhongjiawei<zhongjiawei1@huawei.com> - 1.1.3-5
+- Type:bugfix
+- CVE:NA
+- SUG:NA
+- DESC:move install path to /usr/bin
+
 * Tue Oct 18 2022 zhongjiawei<zhongjiawei1@huawei.com> - 1.1.3-4
 - Type:bugfix
 - CVE:NA
