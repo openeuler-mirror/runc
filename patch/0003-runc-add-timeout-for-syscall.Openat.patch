@@ -1,0 +1,62 @@
+From 1bc820d277edc05d145b8729e3a8e343b9d4b529 Mon Sep 17 00:00:00 2001
+From: zhongjiawei <zhongjiawei1@huawei.com>
+Date: Mon, 10 Oct 2022 14:49:30 +0800
+Subject: [PATCH] runc:add timeout for syscall.Openat
+
+Openat will be blocked until the fifo on the other side is  opened, but in some
+abnomal scenario(e.g. containerd is killed), Openat maybe be blocked all the time.
+---
+ .../libcontainer/standard_init_linux.go       | 29 ++++++++++++++-----
+ 1 file changed, 22 insertions(+), 7 deletions(-)
+
+diff --git a/runc-1.1.3/libcontainer/standard_init_linux.go b/runc-1.1.3/libcontainer/standard_init_linux.go
+index 585a04f..ab553ef 100644
+--- a/runc-1.1.3/libcontainer/standard_init_linux.go
++++ b/runc-1.1.3/libcontainer/standard_init_linux.go
+@@ -6,6 +6,7 @@ import (
+ 	"os"
+ 	"os/exec"
+ 	"strconv"
++	"time"
+ 
+ 	"github.com/opencontainers/runtime-spec/specs-go"
+ 	"github.com/opencontainers/selinux/go-selinux"
+@@ -227,14 +228,28 @@ func (l *linuxStandardInit) Init() error {
+ 	// was given to us was an O_PATH fd to the fifo itself. Linux allows us to
+ 	// re-open an O_PATH fd through /proc.
+ 	fifoPath := "/proc/self/fd/" + strconv.Itoa(l.fifoFd)
+-	fd, err := unix.Open(fifoPath, unix.O_WRONLY|unix.O_CLOEXEC, 0)
+-	if err != nil {
+-		return &os.PathError{Op: "open exec fifo", Path: fifoPath, Err: err}
+-	}
+-	if _, err := unix.Write(fd, []byte("0")); err != nil {
+-		return &os.PathError{Op: "write exec fifo", Path: fifoPath, Err: err}
+-	}
++	ch := make(chan error, 1)
++	go func() {
++		fd, err := unix.Open(fifoPath, unix.O_WRONLY|unix.O_CLOEXEC, 0)
++		if err != nil {
++			ch <- &os.PathError{Op: "open exec fifo", Path: fifoPath, Err: err}
++			return
++		}
++		if _, err := unix.Write(fd, []byte("0")); err != nil {
++			ch <- &os.PathError{Op: "write exec fifo", Path: fifoPath, Err: err}
++			return
++		}
++		ch <- nil
++	}()
+ 
++	select {
++	case chErr := <- ch:
++		if chErr != nil {
++			return chErr
++		}
++	case <- time.After(120 * time.Second):
++		return fmt.Errorf("wait for the fifo to be opened on the other side timeout ")
++	}
+ 	// Close the O_PATH fifofd fd before exec because the kernel resets
+ 	// dumpable in the wrong order. This has been fixed in newer kernels, but
+ 	// we keep this to ensure CVE-2016-9962 doesn't re-emerge on older kernels.
+-- 
+2.30.0
+
