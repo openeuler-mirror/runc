@@ -1,17 +1,17 @@
-From 60b8eb8bd890a96c671f31cc9cda9e5cb9d487f1 Mon Sep 17 00:00:00 2001
-From: zhong-jiawei-1 <zhongjiawei1@huawei.com>
-Date: Fri, 21 Oct 2022 16:30:02 +0800
+From 8b5360bd401a33f5c637710fc5c545c8facb6b20 Mon Sep 17 00:00:00 2001
+From: zhongjiawei <zhongjiawei1@huawei.com>
+Date: Thu, 5 Jan 2023 16:31:33 +0800
 Subject: [PATCH] runc:make hooks log more userful and fix syslog hook bug
 
 ---
- runc-1.1.3/libcontainer/configs/config.go | 17 ++++++++++++++---
- runc-1.1.3/main.go                        |  5 ++++-
+ libcontainer/configs/config.go | 17 ++++++++++++++---
+ main.go                        |  5 ++++-
  2 files changed, 18 insertions(+), 4 deletions(-)
 
-diff --git a/runc-1.1.3/libcontainer/configs/config.go b/runc-1.1.3/libcontainer/configs/config.go
+diff --git a/libcontainer/configs/config.go b/libcontainer/configs/config.go
 index 540bcdb..cda79bf 100644
---- a/runc-1.1.3/libcontainer/configs/config.go
-+++ b/runc-1.1.3/libcontainer/configs/config.go
+--- a/libcontainer/configs/config.go
++++ b/libcontainer/configs/config.go
 @@ -8,6 +8,7 @@ import (
  	"github.com/opencontainers/runc/libcontainer/devices"
  	"github.com/opencontainers/runtime-spec/specs-go"
@@ -66,10 +66,10 @@ index 540bcdb..cda79bf 100644
  func (c Command) Run(s *specs.State) error {
  	b, err := json.Marshal(s)
  	if err != nil {
-diff --git a/runc-1.1.3/main.go b/runc-1.1.3/main.go
+diff --git a/main.go b/main.go
 index 9e14976..0a6f3b4 100644
---- a/runc-1.1.3/main.go
-+++ b/runc-1.1.3/main.go
+--- a/main.go
++++ b/main.go
 @@ -4,6 +4,7 @@ import (
  	"errors"
  	"fmt"

@@ -1,17 +1,17 @@
-From 0ee4b516f4e39ccef4b893a678b01095acbe6ad0 Mon Sep 17 00:00:00 2001
+From 0013fb97dd10a75ae6f455d8c839315f13a39969 Mon Sep 17 00:00:00 2001
 From: zhongjiawei <zhongjiawei1@huawei.com>
-Date: Mon, 7 Nov 2022 18:56:11 +0800
+Date: Thu, 5 Jan 2023 16:52:16 +0800
 Subject: [PATCH] runc:runc log forward to syslog
 
 ---
- runc-1.1.3/main.go                            | 27 ++++++++++++++++++-
+ main.go                                       | 27 ++++++++++++++++++-
  .../sirupsen/logrus/hooks/syslog/syslog.go    |  2 +-
  2 files changed, 27 insertions(+), 2 deletions(-)
 
-diff --git a/runc-1.1.3/main.go b/runc-1.1.3/main.go
+diff --git a/main.go b/main.go
 index e52a2ea..381681e 100644
---- a/runc-1.1.3/main.go
-+++ b/runc-1.1.3/main.go
+--- a/main.go
++++ b/main.go
 @@ -1,19 +1,23 @@
  package main
  
@@ -70,10 +70,10 @@ index e52a2ea..381681e 100644
 +		fmt.Fprint(f, string(s))
 +	}
 +}
-diff --git a/runc-1.1.3/vendor/github.com/sirupsen/logrus/hooks/syslog/syslog.go b/runc-1.1.3/vendor/github.com/sirupsen/logrus/hooks/syslog/syslog.go
+diff --git a/vendor/github.com/sirupsen/logrus/hooks/syslog/syslog.go b/vendor/github.com/sirupsen/logrus/hooks/syslog/syslog.go
 index b6fa374..430f646 100644
---- a/runc-1.1.3/vendor/github.com/sirupsen/logrus/hooks/syslog/syslog.go
-+++ b/runc-1.1.3/vendor/github.com/sirupsen/logrus/hooks/syslog/syslog.go
+--- a/vendor/github.com/sirupsen/logrus/hooks/syslog/syslog.go
++++ b/vendor/github.com/sirupsen/logrus/hooks/syslog/syslog.go
 @@ -2,7 +2,7 @@ package logrus_syslog
  
  import (

@@ -1,16 +1,16 @@
-From 4d52919666e6cfc75c87908a2fe62c180684c4cd Mon Sep 17 00:00:00 2001
-From: zhong-jiawei-1 <zhongjiawei1@huawei.com>
-Date: Fri, 21 Oct 2022 16:56:15 +0800
+From 6b4045a28504aaefdb8c1e9abe6b4ad7c445684a Mon Sep 17 00:00:00 2001
+From: zhongjiawei <zhongjiawei1@huawei.com>
+Date: Thu, 5 Jan 2023 16:33:42 +0800
 Subject: [PATCH] runc:do not setup sysctl in runc when userns enable
 
 ---
- runc-1.1.3/libcontainer/standard_init_linux.go | 10 ++++++----
+ libcontainer/standard_init_linux.go | 10 ++++++----
  1 file changed, 6 insertions(+), 4 deletions(-)
 
-diff --git a/runc-1.1.3/libcontainer/standard_init_linux.go b/runc-1.1.3/libcontainer/standard_init_linux.go
+diff --git a/libcontainer/standard_init_linux.go b/libcontainer/standard_init_linux.go
 index 0dd51b2..b202ba9 100644
---- a/runc-1.1.3/libcontainer/standard_init_linux.go
-+++ b/runc-1.1.3/libcontainer/standard_init_linux.go
+--- a/libcontainer/standard_init_linux.go
++++ b/libcontainer/standard_init_linux.go
 @@ -130,10 +130,12 @@ func (l *linuxStandardInit) Init() error {
  	if err := apparmor.ApplyProfile(l.config.AppArmorProfile); err != nil {
  		return fmt.Errorf("unable to apply apparmor profile: %w", err)

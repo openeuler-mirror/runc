@@ -1,16 +1,16 @@
-From c102651a124775ec8c92b774086c46f76407e9d8 Mon Sep 17 00:00:00 2001
-From: zhong-jiawei-1 <zhongjiawei1@huawei.com>
-Date: Wed, 26 Oct 2022 15:34:29 +0800
+From 6ee9f98fdd90901a2f93b7b58244e543c4623dbe Mon Sep 17 00:00:00 2001
+From: zhongjiawei <zhongjiawei1@huawei.com>
+Date: Thu, 5 Jan 2023 16:50:18 +0800
 Subject: [PATCH] runc:modify runc Makefile
 
 ---
- runc-1.1.3/Makefile | 28 ++++++++++++++++++++++------
+ Makefile | 28 ++++++++++++++++++++++------
  1 file changed, 22 insertions(+), 6 deletions(-)
 
-diff --git a/runc-1.1.3/Makefile b/runc-1.1.3/Makefile
+diff --git a/Makefile b/Makefile
 index cf82c0c..34b5347 100644
---- a/runc-1.1.3/Makefile
-+++ b/runc-1.1.3/Makefile
+--- a/Makefile
++++ b/Makefile
 @@ -10,9 +10,12 @@ GIT_BRANCH_CLEAN := $(shell echo $(GIT_BRANCH) | sed -e "s/[^[:alnum:]]/-/g")
  RUNC_IMAGE := runc_dev$(if $(GIT_BRANCH_CLEAN),:$(GIT_BRANCH_CLEAN))
  PROJECT := github.com/opencontainers/runc
