@@ -1,16 +1,16 @@
-From ac414a8ac967e0fbbf27ea6364f0b134fe9ce9e2 Mon Sep 17 00:00:00 2001
-From: zhong-jiawei-1 <zhongjiawei1@huawei.com>
-Date: Mon, 24 Oct 2022 11:34:15 +0800
+From 7140cab44cd368e987089b66948cfc7f8a414b83 Mon Sep 17 00:00:00 2001
+From: zhongjiawei <zhongjiawei1@huawei.com>
+Date: Thu, 5 Jan 2023 16:35:55 +0800
 Subject: [PATCH] runc:do not kill container if poststart hooks execute failed
 
 ---
- runc-1.1.3/libcontainer/container_linux.go | 5 +----
+ libcontainer/container_linux.go | 5 +----
  1 file changed, 1 insertion(+), 4 deletions(-)
 
-diff --git a/runc-1.1.3/libcontainer/container_linux.go b/runc-1.1.3/libcontainer/container_linux.go
+diff --git a/libcontainer/container_linux.go b/libcontainer/container_linux.go
 index 425e44d..10890c1 100644
---- a/runc-1.1.3/libcontainer/container_linux.go
-+++ b/runc-1.1.3/libcontainer/container_linux.go
+--- a/libcontainer/container_linux.go
++++ b/libcontainer/container_linux.go
 @@ -367,10 +367,7 @@ func (c *linuxContainer) start(process *Process) (retErr error) {
  			}
  

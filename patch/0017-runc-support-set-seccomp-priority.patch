@@ -1,19 +1,19 @@
-From cbb187aee3a309a38a973dee1c1f6d66c1256cf5 Mon Sep 17 00:00:00 2001
-From: zhong-jiawei-1 <zhongjiawei1@huawei.com>
-Date: Fri, 21 Oct 2022 17:09:33 +0800
+From e9cf09ef6800b7740b2c9a7fe7efcf6af91fbc9f Mon Sep 17 00:00:00 2001
+From: zhongjiawei <zhongjiawei1@huawei.com>
+Date: Thu, 5 Jan 2023 16:34:57 +0800
 Subject: [PATCH] runc: support set seccomp priority
 
 ---
- runc-1.1.3/libcontainer/configs/config.go                       | 1 +
- runc-1.1.3/libcontainer/seccomp/seccomp_linux.go                | 2 +-
- runc-1.1.3/libcontainer/specconv/spec_linux.go                  | 1 +
+ libcontainer/configs/config.go                                  | 1 +
+ libcontainer/seccomp/seccomp_linux.go                           | 2 +-
+ libcontainer/specconv/spec_linux.go                             | 1 +
  .../github.com/opencontainers/runtime-spec/specs-go/config.go   | 1 +
  4 files changed, 4 insertions(+), 1 deletion(-)
 
-diff --git a/runc-1.1.3/libcontainer/configs/config.go b/runc-1.1.3/libcontainer/configs/config.go
+diff --git a/libcontainer/configs/config.go b/libcontainer/configs/config.go
 index cda79bf..f85ade3 100644
---- a/runc-1.1.3/libcontainer/configs/config.go
-+++ b/runc-1.1.3/libcontainer/configs/config.go
+--- a/libcontainer/configs/config.go
++++ b/libcontainer/configs/config.go
 @@ -88,6 +88,7 @@ type Syscall struct {
  	Name     string `json:"name"`
  	Action   Action `json:"action"`
@@ -22,10 +22,10 @@ index cda79bf..f85ade3 100644
  	Args     []*Arg `json:"args"`
  }
  
-diff --git a/runc-1.1.3/libcontainer/seccomp/seccomp_linux.go b/runc-1.1.3/libcontainer/seccomp/seccomp_linux.go
+diff --git a/libcontainer/seccomp/seccomp_linux.go b/libcontainer/seccomp/seccomp_linux.go
 index 8c12af7..e4b5750 100644
---- a/runc-1.1.3/libcontainer/seccomp/seccomp_linux.go
-+++ b/runc-1.1.3/libcontainer/seccomp/seccomp_linux.go
+--- a/libcontainer/seccomp/seccomp_linux.go
++++ b/libcontainer/seccomp/seccomp_linux.go
 @@ -256,7 +256,7 @@ func matchCall(filter *libseccomp.ScmpFilter, call *configs.Syscall, defAct libs
  		}
  	}
@@ -35,10 +35,10 @@ index 8c12af7..e4b5750 100644
  }
  
  // Version returns major, minor, and micro.
-diff --git a/runc-1.1.3/libcontainer/specconv/spec_linux.go b/runc-1.1.3/libcontainer/specconv/spec_linux.go
+diff --git a/libcontainer/specconv/spec_linux.go b/libcontainer/specconv/spec_linux.go
 index 19dd947..02a7439 100644
---- a/runc-1.1.3/libcontainer/specconv/spec_linux.go
-+++ b/runc-1.1.3/libcontainer/specconv/spec_linux.go
+--- a/libcontainer/specconv/spec_linux.go
++++ b/libcontainer/specconv/spec_linux.go
 @@ -1061,6 +1061,7 @@ func SetupSeccomp(config *specs.LinuxSeccomp) (*configs.Seccomp, error) {
  				Name:     name,
  				Action:   newAction,
@@ -47,10 +47,10 @@ index 19dd947..02a7439 100644
  				Args:     []*configs.Arg{},
  			}
  			// Loop through all the arguments of the syscall and convert them
-diff --git a/runc-1.1.3/vendor/github.com/opencontainers/runtime-spec/specs-go/config.go b/runc-1.1.3/vendor/github.com/opencontainers/runtime-spec/specs-go/config.go
+diff --git a/vendor/github.com/opencontainers/runtime-spec/specs-go/config.go b/vendor/github.com/opencontainers/runtime-spec/specs-go/config.go
 index e8143b2..135f74a 100644
---- a/runc-1.1.3/vendor/github.com/opencontainers/runtime-spec/specs-go/config.go
-+++ b/runc-1.1.3/vendor/github.com/opencontainers/runtime-spec/specs-go/config.go
+--- a/vendor/github.com/opencontainers/runtime-spec/specs-go/config.go
++++ b/vendor/github.com/opencontainers/runtime-spec/specs-go/config.go
 @@ -688,6 +688,7 @@ type LinuxSyscall struct {
  	Names    []string           `json:"names"`
  	Action   LinuxSeccompAction `json:"action"`

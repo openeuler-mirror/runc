@@ -1,17 +1,17 @@
-From 3afc90db6eb945e2668b66b1613659bb28e306e1 Mon Sep 17 00:00:00 2001
+From 992170fc8663968692d76db0710ca3fa64de5917 Mon Sep 17 00:00:00 2001
 From: zhongjiawei <zhongjiawei1@huawei.com>
-Date: Sat, 8 Oct 2022 16:23:11 +0800
+Date: Thu, 5 Jan 2023 16:16:57 +0800
 Subject: [PATCH] runc:fix unittest and integration test error caused
 
 ---
- runc-1.1.3/libcontainer/integration/execin_test.go | 8 +-------
- runc-1.1.3/tests/integration/exec.bats             | 4 ++--
+ libcontainer/integration/execin_test.go | 8 +-------
+ tests/integration/exec.bats             | 4 ++--
  2 files changed, 3 insertions(+), 9 deletions(-)
 
-diff --git a/runc-1.1.3/libcontainer/integration/execin_test.go b/runc-1.1.3/libcontainer/integration/execin_test.go
+diff --git a/libcontainer/integration/execin_test.go b/libcontainer/integration/execin_test.go
 index f8a6a9c..9669eca 100644
---- a/runc-1.1.3/libcontainer/integration/execin_test.go
-+++ b/runc-1.1.3/libcontainer/integration/execin_test.go
+--- a/libcontainer/integration/execin_test.go
++++ b/libcontainer/integration/execin_test.go
 @@ -62,9 +62,6 @@ func TestExecIn(t *testing.T) {
  	if !strings.Contains(out, "cat") || !strings.Contains(out, "ps") {
  		t.Fatalf("unexpected running process, output %q", out)
@@ -36,10 +36,10 @@ index f8a6a9c..9669eca 100644
  	}
  }
  
-diff --git a/runc-1.1.3/tests/integration/exec.bats b/runc-1.1.3/tests/integration/exec.bats
+diff --git a/tests/integration/exec.bats b/tests/integration/exec.bats
 index 140cd18..cd01f00 100644
---- a/runc-1.1.3/tests/integration/exec.bats
-+++ b/runc-1.1.3/tests/integration/exec.bats
+--- a/tests/integration/exec.bats
++++ b/tests/integration/exec.bats
 @@ -101,7 +101,7 @@ function teardown() {
  
  	runc exec --cwd /bin test_busybox pwd
