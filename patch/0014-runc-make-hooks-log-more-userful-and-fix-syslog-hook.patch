@@ -1,0 +1,102 @@
+From 8b5360bd401a33f5c637710fc5c545c8facb6b20 Mon Sep 17 00:00:00 2001
+From: zhongjiawei <zhongjiawei1@huawei.com>
+Date: Thu, 5 Jan 2023 16:31:33 +0800
+Subject: [PATCH] runc:make hooks log more userful and fix syslog hook bug
+
+---
+ libcontainer/configs/config.go | 17 ++++++++++++++---
+ main.go                        |  5 ++++-
+ 2 files changed, 18 insertions(+), 4 deletions(-)
+
+diff --git a/libcontainer/configs/config.go b/libcontainer/configs/config.go
+index 540bcdb..cda79bf 100644
+--- a/libcontainer/configs/config.go
++++ b/libcontainer/configs/config.go
+@@ -8,6 +8,7 @@ import (
+ 	"github.com/opencontainers/runc/libcontainer/devices"
+ 	"github.com/opencontainers/runtime-spec/specs-go"
+ 	"os/exec"
++	"strings"
+ 	"time"
+ )
+ 
+@@ -286,11 +287,11 @@ type Capabilities struct {
+ 
+ func (hooks HookList) RunHooks(state *specs.State) error {
+ 	for i, h := range hooks {
+-		logrus.Infof("run hooks %d:%T, ContainerId: %s", i, h, state.ID)
++		logrus.Infof("run hooks %d:%s, ContainerId: %s", i, h.Info(), state.ID)
+ 		if err := h.Run(state); err != nil {
+-			return fmt.Errorf("error running hook #%d: %w, ContainerId: %s", i, err, state.ID)
++			return fmt.Errorf("error running hook %d:%s err: %w, ContainerId: %s", i, h.Info(), err, state.ID)
+ 		}
+-		logrus.Infof("hooks %d:%T done, ContainerId: %s", i, h, state.ID)
++		logrus.Infof("hooks %d:%s done, ContainerId: %s", i, h.Info(), state.ID)
+ 	}
+ 
+ 	return nil
+@@ -345,6 +346,7 @@ func (hooks *Hooks) MarshalJSON() ([]byte, error) {
+ type Hook interface {
+ 	// Run executes the hook with the provided state.
+ 	Run(*specs.State) error
++	Info() string
+ }
+ 
+ // NewFunctionHook will call the provided function when the hook is run.
+@@ -362,6 +364,11 @@ func (f FuncHook) Run(s *specs.State) error {
+ 	return f.run(s)
+ }
+ 
++func (f FuncHook) Info() string {
++	return "hook function"
++}
++
++
+ type Command struct {
+ 	Path    string         `json:"path"`
+ 	Args    []string       `json:"args"`
+@@ -381,6 +388,10 @@ type CommandHook struct {
+ 	Command
+ }
+ 
++func (c Command) Info() string {
++	return c.Path + "," + strings.Join(c.Args, ",")
++}
++
+ func (c Command) Run(s *specs.State) error {
+ 	b, err := json.Marshal(s)
+ 	if err != nil {
+diff --git a/main.go b/main.go
+index 9e14976..0a6f3b4 100644
+--- a/main.go
++++ b/main.go
+@@ -4,6 +4,7 @@ import (
+ 	"errors"
+ 	"fmt"
+ 	"io"
++	"log/syslog"
+ 	"os"
+ 	"path/filepath"
+ 	"runtime"
+@@ -14,6 +15,7 @@ import (
+ 	"github.com/opencontainers/runtime-spec/specs-go"
+ 
+ 	"github.com/sirupsen/logrus"
++	logrus_syslog "github.com/sirupsen/logrus/hooks/syslog"
+ 	"github.com/urfave/cli"
+ )
+ 
+@@ -218,8 +220,9 @@ func configLogrus(context *cli.Context) error {
+ 		hook, serr := logrus_syslog.NewSyslogHook("", "", syslog.LOG_INFO|syslog.LOG_USER, "docker-runc")
+ 		if serr != nil {
+ 			fmt.Fprint(f, fmt.Sprintf("Leo: new syslog hook get %s", serr))
++		} else {
++			logrus.AddHook(hook)
+ 		}
+-		logrus.AddHook(hook)
+ 	}
+ 	if logLevel := context.GlobalString("log-level"); logLevel != "" {
+ 		lvl, err := logrus.ParseLevel(logLevel)
+-- 
+2.30.0
+

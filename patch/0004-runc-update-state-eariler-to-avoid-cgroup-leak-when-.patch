@@ -1,0 +1,46 @@
+From 88f50537a85aed278be136cd0b3d4664e8c71b5d Mon Sep 17 00:00:00 2001
+From: zhongjiawei <zhongjiawei1@huawei.com>
+Date: Thu, 5 Jan 2023 16:19:48 +0800
+Subject: [PATCH] runc: update state eariler to avoid cgroup leak when process
+ failed
+
+if process stuck in somewhere. upper caller like containerd may
+have a timeout for process launching.
+
+process will be killed after this timeout, and then call `runc
+delete` to retrieve its resource like cgroup and perform poststop
+hook.
+
+if process got stuck right before updating state, and after cgroup
+applied, like prestart-hook. In such case, `runc delete xxx` will
+do nothing because state file is missing, runc is not aware of this
+container. so process cgroup will stay and never get removed.
+
+This patch perform state updating right after cgroup applying. so
+`runc delete` will do the cleaning job
+
+Change-Id: I7b247f501986e712a86da3958d1be573af4e84a6
+Signed-off-by: Deng Guangxing <dengguangxing@huawei.com
+---
+ libcontainer/process_linux.go | 5 +++++
+ 1 file changed, 5 insertions(+)
+
+diff --git a/libcontainer/process_linux.go b/libcontainer/process_linux.go
+index 446649a..29408d7 100644
+--- a/libcontainer/process_linux.go
++++ b/libcontainer/process_linux.go
+@@ -411,6 +411,11 @@ func (p *initProcess) start() (retErr error) {
+ 	if err := p.manager.Apply(p.pid()); err != nil {
+ 		return fmt.Errorf("unable to apply cgroup configuration: %w", err)
+ 	}
++	// update state here, so we can retrieve process resource
++	// even it get killed by accident
++	if _, err := p.container.updateState(p); err != nil {
++		return err
++	}
+ 	if p.intelRdtManager != nil {
+ 		if err := p.intelRdtManager.Apply(p.pid()); err != nil {
+ 			return fmt.Errorf("unable to apply Intel RDT configuration: %w", err)
+-- 
+2.30.0
+
