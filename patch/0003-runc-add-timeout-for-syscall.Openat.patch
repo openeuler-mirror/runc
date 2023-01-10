@@ -1,0 +1,60 @@
+From 1c953cdee5aa6c677bef7c7042dbec6fc9ddf172 Mon Sep 17 00:00:00 2001
+From: zhongjiawei <zhongjiawei1@huawei.com>
+Date: Thu, 5 Jan 2023 16:18:37 +0800
+Subject: [PATCH] runc:add timeout for syscall.Openat
+
+---
+ libcontainer/standard_init_linux.go | 29 ++++++++++++++++++++++-------
+ 1 file changed, 22 insertions(+), 7 deletions(-)
+
+diff --git a/libcontainer/standard_init_linux.go b/libcontainer/standard_init_linux.go
+index 585a04f..ab553ef 100644
+--- a/libcontainer/standard_init_linux.go
++++ b/libcontainer/standard_init_linux.go
+@@ -6,6 +6,7 @@ import (
+ 	"os"
+ 	"os/exec"
+ 	"strconv"
++	"time"
+ 
+ 	"github.com/opencontainers/runtime-spec/specs-go"
+ 	"github.com/opencontainers/selinux/go-selinux"
+@@ -227,14 +228,28 @@ func (l *linuxStandardInit) Init() error {
+ 	// was given to us was an O_PATH fd to the fifo itself. Linux allows us to
+ 	// re-open an O_PATH fd through /proc.
+ 	fifoPath := "/proc/self/fd/" + strconv.Itoa(l.fifoFd)
+-	fd, err := unix.Open(fifoPath, unix.O_WRONLY|unix.O_CLOEXEC, 0)
+-	if err != nil {
+-		return &os.PathError{Op: "open exec fifo", Path: fifoPath, Err: err}
+-	}
+-	if _, err := unix.Write(fd, []byte("0")); err != nil {
+-		return &os.PathError{Op: "write exec fifo", Path: fifoPath, Err: err}
+-	}
++	ch := make(chan error, 1)
++	go func() {
++		fd, err := unix.Open(fifoPath, unix.O_WRONLY|unix.O_CLOEXEC, 0)
++		if err != nil {
++			ch <- &os.PathError{Op: "open exec fifo", Path: fifoPath, Err: err}
++			return
++		}
++		if _, err := unix.Write(fd, []byte("0")); err != nil {
++			ch <- &os.PathError{Op: "write exec fifo", Path: fifoPath, Err: err}
++			return
++		}
++		ch <- nil
++	}()
+ 
++	select {
++	case chErr := <- ch:
++		if chErr != nil {
++			return chErr
++		}
++	case <- time.After(120 * time.Second):
++		return fmt.Errorf("wait for the fifo to be opened on the other side timeout ")
++	}
+ 	// Close the O_PATH fifofd fd before exec because the kernel resets
+ 	// dumpable in the wrong order. This has been fixed in newer kernels, but
+ 	// we keep this to ensure CVE-2016-9962 doesn't re-emerge on older kernels.
+-- 
+2.30.0
+

@@ -1,0 +1,43 @@
+From f2a2674f9883e6eb588ce9235161019d31bcedc6 Mon Sep 17 00:00:00 2001
+From: zhongjiawei <zhongjiawei1@huawei.com>
+Date: Thu, 5 Jan 2023 16:21:10 +0800
+Subject: [PATCH] runc: print cgroup info if cpuset missing occurs
+
+---
+ libcontainer/cgroups/fs/cpuset.go | 20 ++++++++++++++++++++
+ 1 file changed, 20 insertions(+)
+
+diff --git a/libcontainer/cgroups/fs/cpuset.go b/libcontainer/cgroups/fs/cpuset.go
+index 550baa4..341d5dc 100644
+--- a/libcontainer/cgroups/fs/cpuset.go
++++ b/libcontainer/cgroups/fs/cpuset.go
+@@ -172,6 +172,26 @@ func (s *CpusetGroup) ApplyDir(dir string, r *configs.Resources, pid int) error
+ }
+ 
+ func getCpusetSubsystemSettings(parent string) (cpus, mems string, err error) {
++	defer func() {
++		if err != nil {
++			minfo, err1 := ioutil.ReadFile("/proc/self/mountinfo")
++			if err1 != nil {
++				logrus.Errorf("Failed to read mountinfo when getSubsystemSettings get an error")
++			}
++
++			dirInfo := ""
++			fs, err2 := ioutil.ReadDir(parent)
++			if err2 != nil {
++				logrus.Errorf("Failed to read mountinfo when getSubsystemSettings get an error")
++			}
++			for _, f := range fs {
++				dirInfo = dirInfo + " " + f.Name()
++			}
++
++			logrus.Errorf("Read cpuset cgroup failed, print mountinfo and cgroup info here"+
++				"path: %s, mountinfo: [%s], dirinfo: [%s]", parent, string(minfo), dirInfo)
++		}
++	}()
+ 	if cpus, err = cgroups.ReadFile(parent, "cpuset.cpus"); err != nil {
+ 		return
+ 	}
+-- 
+2.30.0
+

@@ -1,0 +1,88 @@
+From 0013fb97dd10a75ae6f455d8c839315f13a39969 Mon Sep 17 00:00:00 2001
+From: zhongjiawei <zhongjiawei1@huawei.com>
+Date: Thu, 5 Jan 2023 16:52:16 +0800
+Subject: [PATCH] runc:runc log forward to syslog
+
+---
+ main.go                                       | 27 ++++++++++++++++++-
+ .../sirupsen/logrus/hooks/syslog/syslog.go    |  2 +-
+ 2 files changed, 27 insertions(+), 2 deletions(-)
+
+diff --git a/main.go b/main.go
+index e52a2ea..381681e 100644
+--- a/main.go
++++ b/main.go
+@@ -1,19 +1,23 @@
+ package main
+ 
+ import (
++	"encoding/json"
+ 	"errors"
+ 	"fmt"
+ 	"io"
++	"log/syslog"
+ 	"os"
+ 	"path/filepath"
+ 	"runtime"
+ 	"strconv"
+ 	"strings"
++	"time"
+ 
+ 	"github.com/opencontainers/runc/libcontainer/seccomp"
+ 	"github.com/opencontainers/runtime-spec/specs-go"
+ 
+ 	"github.com/sirupsen/logrus"
++	logrus_syslog "github.com/sirupsen/logrus/hooks/syslog"
+ 	"github.com/urfave/cli"
+ )
+ 
+@@ -215,6 +219,12 @@ func configLogrus(context *cli.Context) error {
+ 			return err
+ 		}
+ 		logrus.SetOutput(f)
++		hook, serr := logrus_syslog.NewSyslogHook("", "", syslog.LOG_INFO|syslog.LOG_USER, "docker-runc")
++		if serr != nil {
++			logToFile(f, "error", fmt.Sprintf("new syslog hook get %s", serr))
++		} else {
++			logrus.AddHook(hook)
++		}
+ 	}
+ 	if logLevel := context.GlobalString("log-level"); logLevel != "" {
+ 		lvl, err := logrus.ParseLevel(logLevel)
+@@ -230,4 +240,19 @@ func configLogrus(context *cli.Context) error {
+ 	}
+ 	return nil
+ }
+-
++func logToFile(f io.Writer, level string, msg string) {
++	var (
++		log struct {
++			Level string
++			Msg   string
++			Time  time.Time
++		}
++	)
++	log.Level = level
++	log.Msg = msg
++	log.Time = time.Now()
++	s, err := json.Marshal(log)
++	if err != nil {
++		fmt.Fprint(f, string(s))
++	}
++}
+diff --git a/vendor/github.com/sirupsen/logrus/hooks/syslog/syslog.go b/vendor/github.com/sirupsen/logrus/hooks/syslog/syslog.go
+index b6fa374..430f646 100644
+--- a/vendor/github.com/sirupsen/logrus/hooks/syslog/syslog.go
++++ b/vendor/github.com/sirupsen/logrus/hooks/syslog/syslog.go
+@@ -2,7 +2,7 @@ package logrus_syslog
+ 
+ import (
+ 	"fmt"
+-	"github.com/Sirupsen/logrus"
++	"github.com/sirupsen/logrus"
+ 	"log/syslog"
+ 	"os"
+ )
+-- 
+2.30.0
+
