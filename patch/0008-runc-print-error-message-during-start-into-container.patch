@@ -1,0 +1,32 @@
+From 8a337b8a40bf15bc25770cc5a853e962a96435c0 Mon Sep 17 00:00:00 2001
+From: zhongjiawei <zhongjiawei1@huawei.com>
+Date: Thu, 5 Jan 2023 16:24:53 +0800
+Subject: [PATCH] runc: print error message during start into container log
+
+---
+ init.go | 2 ++
+ 1 file changed, 2 insertions(+)
+
+diff --git a/init.go b/init.go
+index bddc237..a0520b5 100644
+--- a/init.go
++++ b/init.go
+@@ -1,6 +1,7 @@
+ package main
+ 
+ import (
++	"fmt"
+ 	"os"
+ 	"runtime"
+ 	"strconv"
+@@ -34,6 +35,7 @@ func init() {
+ 
+ 		factory, _ := libcontainer.New("")
+ 		if err := factory.StartInitialization(); err != nil {
++			fmt.Fprintf(os.Stderr, "libcontainer: container start initialization failed: %s", err)
+ 			// as the error is sent back to the parent there is no need to log
+ 			// or write it to stderr because the parent process will handle this
+ 			os.Exit(1)
+-- 
+2.30.0
+

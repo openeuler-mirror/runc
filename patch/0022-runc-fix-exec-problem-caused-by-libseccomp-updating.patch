@@ -1,0 +1,48 @@
+From 62ccdfd5cd6572c8c2c5965b9ca85fc78f43bfb6 Mon Sep 17 00:00:00 2001
+From: zhongjiawei <zhongjiawei1@huawei.com>
+Date: Thu, 5 Jan 2023 16:41:29 +0800
+Subject: [PATCH] runc:fix exec problem caused by libseccomp updating
+
+reason: libseccomp updating causes runc exec performance
+degradation, which causes container health check failed and container
+is killed. So we add an environmental variable to skip this unnecessary
+seccomp step.
+
+related test data:
+before fixing, exec "runc exec" 20 times,
+start time: 1566210117.193673318  end time: 1566210125.493181368
+takes about 8s
+after fixing, exec "runc exec" 20 times,
+start time: 1566210059.708669785  end time: 1566210060.879416932
+takes about 1s
+
+Change-Id: I751ac8354394bd15a420ad8410b12ef3f75622a1
+Signed-off-by: xiadanni <xiadanni1@huawei.com>
+---
+ libcontainer/seccomp/seccomp_linux.go | 3 +++
+ 1 file changed, 3 insertions(+)
+
+diff --git a/libcontainer/seccomp/seccomp_linux.go b/libcontainer/seccomp/seccomp_linux.go
+index e4b5750..a925be1 100644
+--- a/libcontainer/seccomp/seccomp_linux.go
++++ b/libcontainer/seccomp/seccomp_linux.go
+@@ -6,6 +6,7 @@ package seccomp
+ import (
+ 	"errors"
+ 	"fmt"
++	"os"
+ 
+ 	libseccomp "github.com/seccomp/libseccomp-golang"
+ 	"github.com/sirupsen/logrus"
+@@ -30,6 +31,8 @@ const (
+ // Returns the seccomp file descriptor if any of the filters include a
+ // SCMP_ACT_NOTIFY action, otherwise returns -1.
+ func InitSeccomp(config *configs.Seccomp) (int, error) {
++	os.Setenv("LIBSECCOMP_TRANSACTION_DISABLE", "1")
++	defer os.Unsetenv("LIBSECCOMP_TRANSACTION_DISABLE")
+ 	if config == nil {
+ 		return -1, errors.New("cannot initialize Seccomp - nil config passed")
+ 	}
+-- 
+2.30.0
+

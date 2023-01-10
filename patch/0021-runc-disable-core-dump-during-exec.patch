@@ -1,0 +1,25 @@
+From c8bf02dafed3537cd295c0898804809744f02f1e Mon Sep 17 00:00:00 2001
+From: zhongjiawei <zhongjiawei1@huawei.com>
+Date: Thu, 5 Jan 2023 16:38:29 +0800
+Subject: [PATCH] runc:disable core dump during exec
+
+---
+ libcontainer/process_linux.go | 2 ++
+ 1 file changed, 2 insertions(+)
+
+diff --git a/libcontainer/process_linux.go b/libcontainer/process_linux.go
+index 29408d7..75d05b7 100644
+--- a/libcontainer/process_linux.go
++++ b/libcontainer/process_linux.go
+@@ -79,6 +79,8 @@ func (p *setnsProcess) signal(sig os.Signal) error {
+ }
+ 
+ func (p *setnsProcess) start() (retErr error) {
++	unix.Prctl(unix.PR_SET_DUMPABLE, 0, 0, 0, 0)
++	defer unix.Prctl(unix.PR_SET_DUMPABLE, 1, 0, 0, 0)
+ 	defer p.messageSockPair.parent.Close()
+ 	// get the "before" value of oom kill count
+ 	oom, _ := p.manager.OOMKillCount()
+-- 
+2.30.0
+

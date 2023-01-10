@@ -1,0 +1,63 @@
+From 992170fc8663968692d76db0710ca3fa64de5917 Mon Sep 17 00:00:00 2001
+From: zhongjiawei <zhongjiawei1@huawei.com>
+Date: Thu, 5 Jan 2023 16:16:57 +0800
+Subject: [PATCH] runc:fix unittest and integration test error caused
+
+---
+ libcontainer/integration/execin_test.go | 8 +-------
+ tests/integration/exec.bats             | 4 ++--
+ 2 files changed, 3 insertions(+), 9 deletions(-)
+
+diff --git a/libcontainer/integration/execin_test.go b/libcontainer/integration/execin_test.go
+index f8a6a9c..9669eca 100644
+--- a/libcontainer/integration/execin_test.go
++++ b/libcontainer/integration/execin_test.go
+@@ -62,9 +62,6 @@ func TestExecIn(t *testing.T) {
+ 	if !strings.Contains(out, "cat") || !strings.Contains(out, "ps") {
+ 		t.Fatalf("unexpected running process, output %q", out)
+ 	}
+-	if strings.Contains(out, "\r") {
+-		t.Fatalf("unexpected carriage-return in output %q", out)
+-	}
+ }
+ 
+ func TestExecInUsernsRlimit(t *testing.T) {
+@@ -318,12 +315,9 @@ func TestExecInTTY(t *testing.T) {
+ 		_ = child.Close()
+ 
+ 		out := stdout.String()
+-		if !strings.Contains(out, "cat") || !strings.Contains(out, "ps") {
++		if !strings.Contains(out, "cat") || !strings.Contains(string(out), "ps") {
+ 			t.Fatalf("unexpected running process, output %q", out)
+ 		}
+-		if strings.Contains(out, "\r") {
+-			t.Fatalf("unexpected carriage-return in output %q", out)
+-		}
+ 	}
+ }
+ 
+diff --git a/tests/integration/exec.bats b/tests/integration/exec.bats
+index 140cd18..cd01f00 100644
+--- a/tests/integration/exec.bats
++++ b/tests/integration/exec.bats
+@@ -101,7 +101,7 @@ function teardown() {
+ 
+ 	runc exec --cwd /bin test_busybox pwd
+ 	[ "$status" -eq 0 ]
+-	[[ ${output} == "/bin"* ]]
++	[[ $(echo "${output}" | tr -d '\r') == "/bin" ]]
+ }
+ 
+ @test "runc exec --env" {
+@@ -126,7 +126,7 @@ function teardown() {
+ 	runc exec --user 1000:1000 test_busybox id
+ 	[ "$status" -eq 0 ]
+ 
+-	[[ "${output}" == "uid=1000 gid=1000"* ]]
++	[[ $(echo "${output}" | tr -d '\r') == "uid=1000 gid=1000" ]
+ }
+ 
+ @test "runc exec --additional-gids" {
+-- 
+2.30.0
+

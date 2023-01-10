@@ -1,0 +1,125 @@
+From c40ef2e5c3415c807172271936a06dfbf89747ee Mon Sep 17 00:00:00 2001
+From: zhongjiawei <zhongjiawei1@huawei.com>
+Date: Thu, 5 Jan 2023 16:43:54 +0800
+Subject: [PATCH] runc:add log message for cgroup file check
+
+---
+ libcontainer/container_linux.go     |  1 -
+ libcontainer/standard_init_linux.go | 30 +----------------------------
+ main.go                             | 25 ------------------------
+ 3 files changed, 1 insertion(+), 55 deletions(-)
+
+diff --git a/libcontainer/container_linux.go b/libcontainer/container_linux.go
+index 5ef5a9a..10890c1 100644
+--- a/libcontainer/container_linux.go
++++ b/libcontainer/container_linux.go
+@@ -355,7 +355,6 @@ func (c *linuxContainer) start(process *Process) (retErr error) {
+ 	}
+ 
+ 	if err := parent.start(); err != nil {
+-		printCgroupInfo(c.config.Cgroups.Path)
+ 		return fmt.Errorf("unable to start container process: %w", err)
+ 	}
+ 
+diff --git a/libcontainer/standard_init_linux.go b/libcontainer/standard_init_linux.go
+index 8a60501..99e7003 100644
+--- a/libcontainer/standard_init_linux.go
++++ b/libcontainer/standard_init_linux.go
+@@ -276,34 +276,6 @@ func (l *linuxStandardInit) Init() error {
+ 		return err
+ 	}
+ 
+-	if err := system.Exec(name, l.config.Args[0:], os.Environ()); err != nil {
+-		printCgroupInfo("")
+-		return err
+-	}
+-	return nil
+-}
+-
+-func printCgroupInfo(path string) {
+-	cgroupRoot := "/sys/fs/cgroup"
+-	infoFileList := []string{
+-		"/proc/meminfo",
+-		"/sys/fs/cgroup/memory/memory.stat",
+-		filepath.Join(cgroupRoot, "files", path, "files.limit"),
+-		filepath.Join(cgroupRoot, "files", path, "files.usage"),
+-		filepath.Join(cgroupRoot, "pids", path, "pids.max"),
+-		filepath.Join(cgroupRoot, "pids", path, "pids.current"),
+-		filepath.Join(cgroupRoot, "memory", path, "memory.usage_in_bytes"),
+-		filepath.Join(cgroupRoot, "memory", path, "memory.limit_in_bytes"),
+-		filepath.Join(cgroupRoot, "memory", path, "memory.stat"),
+-		filepath.Join(cgroupRoot, "cpu", path, "cpu.stat"),
+-	}
+-	for _, file := range infoFileList {
+-		printFileContent(file)
+-	}
+-}
+-
+-func printFileContent(path string) {
+-	output, err := ioutil.ReadFile(path)
+-	logrus.Infof("content read from %s: %s, err: %v", path, string(output), err)
++	return system.Exec(name, l.config.Args[0:], os.Environ())
+ }
+ 
+diff --git a/main.go b/main.go
+index 6e9101a..e624347 100644
+--- a/main.go
++++ b/main.go
+@@ -1,7 +1,6 @@
+ package main
+ 
+ import (
+-	"encoding/json"
+ 	"errors"
+ 	"fmt"
+ 	"io"
+@@ -11,13 +10,11 @@ import (
+ 	"runtime"
+ 	"strconv"
+ 	"strings"
+-	"time"
+ 
+ 	"github.com/opencontainers/runc/libcontainer/seccomp"
+ 	"github.com/opencontainers/runtime-spec/specs-go"
+ 
+ 	"github.com/sirupsen/logrus"
+-	logrus_syslog "github.com/sirupsen/logrus/hooks/syslog"
+ 	"github.com/urfave/cli"
+ )
+ 
+@@ -219,12 +216,6 @@ func configLogrus(context *cli.Context) error {
+ 			return err
+ 		}
+ 		logrus.SetOutput(f)
+-		hook, serr := logrus_syslog.NewSyslogHook("", "", syslog.LOG_INFO|syslog.LOG_USER, "docker-runc")
+-		if serr != nil {
+-			logToFile(f, "error", fmt.Sprintf("Leo: new syslog hook get %s", serr))
+-		} else {
+-			logrus.AddHook(hook)
+-		}
+ 	}
+ 	if logLevel := context.GlobalString("log-level"); logLevel != "" {
+ 		lvl, err := logrus.ParseLevel(logLevel)
+@@ -241,19 +232,3 @@ func configLogrus(context *cli.Context) error {
+ 	return nil
+ }
+ 
+-func logToFile(f io.Writer, level string, msg string) {
+-	var (
+-		log struct {
+-			Level string
+-			Msg   string
+-			Time  time.Time
+-		}
+-	)
+-	log.Level = level
+-	log.Msg = msg
+-	log.Time = time.Now()
+-	s, err := json.Marshal(log)
+-	if err != nil {
+-		fmt.Fprint(f, string(s))
+-	}
+-}
+-- 
+2.30.0
+

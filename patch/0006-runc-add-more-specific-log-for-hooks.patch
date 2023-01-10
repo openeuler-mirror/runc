@@ -1,0 +1,28 @@
+From 7cc7be6f85400953208981415d9f46a4db12bbcc Mon Sep 17 00:00:00 2001
+From: zhongjiawei <zhongjiawei1@huawei.com>
+Date: Thu, 5 Jan 2023 16:22:53 +0800
+Subject: [PATCH] runc: add more specific log for hooks
+
+---
+ libcontainer/configs/config.go | 2 ++
+ 1 file changed, 2 insertions(+)
+
+diff --git a/libcontainer/configs/config.go b/libcontainer/configs/config.go
+index c1b4a00..72910ff 100644
+--- a/libcontainer/configs/config.go
++++ b/libcontainer/configs/config.go
+@@ -279,9 +279,11 @@ type Capabilities struct {
+ 
+ func (hooks HookList) RunHooks(state *specs.State) error {
+ 	for i, h := range hooks {
++		logrus.Infof("run hooks %d:%T", i, h)
+ 		if err := h.Run(state); err != nil {
+ 			return fmt.Errorf("error running hook #%d: %w", i, err)
+ 		}
++		logrus.Infof("hooks %d:%T done", i, h)
+ 	}
+ 
+ 	return nil
+-- 
+2.30.0
+

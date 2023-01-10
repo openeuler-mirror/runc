@@ -1,0 +1,79 @@
+From 6ee9f98fdd90901a2f93b7b58244e543c4623dbe Mon Sep 17 00:00:00 2001
+From: zhongjiawei <zhongjiawei1@huawei.com>
+Date: Thu, 5 Jan 2023 16:50:18 +0800
+Subject: [PATCH] runc:modify runc Makefile
+
+---
+ Makefile | 28 ++++++++++++++++++++++------
+ 1 file changed, 22 insertions(+), 6 deletions(-)
+
+diff --git a/Makefile b/Makefile
+index cf82c0c..34b5347 100644
+--- a/Makefile
++++ b/Makefile
+@@ -10,9 +10,12 @@ GIT_BRANCH_CLEAN := $(shell echo $(GIT_BRANCH) | sed -e "s/[^[:alnum:]]/-/g")
+ RUNC_IMAGE := runc_dev$(if $(GIT_BRANCH_CLEAN),:$(GIT_BRANCH_CLEAN))
+ PROJECT := github.com/opencontainers/runc
+ BUILDTAGS ?= seccomp
+-COMMIT ?= $(shell git describe --dirty --long --always)
++COMMIT ?= $(shell cat ./git-commit | head -c 40)
+ VERSION := $(shell cat ./VERSION)
+ 
++BEP_DIR := "/tmp/runc-build-bep"
++BEP_FLAG := "-tmpdir=${BEP_DIR}"
++
+ ifeq ($(shell $(GO) env GOOS),linux)
+ 	ifeq (,$(filter $(shell $(GO) env GOARCH),mips mipsle mips64 mips64le ppc64))
+ 		ifeq (,$(findstring -race,$(EXTRA_FLAGS)))
+@@ -22,23 +25,33 @@ ifeq ($(shell $(GO) env GOOS),linux)
+ endif
+ GO_BUILD := $(GO) build -trimpath $(GO_BUILDMODE) $(EXTRA_FLAGS) -tags "$(BUILDTAGS)" \
+ 	-ldflags "-X main.gitCommit=$(COMMIT) -X main.version=$(VERSION) $(EXTRA_LDFLAGS)"
+-GO_BUILD_STATIC := CGO_ENABLED=1 $(GO) build -trimpath $(EXTRA_FLAGS) -tags "$(BUILDTAGS) netgo osusergo" \
+-	-ldflags "-extldflags -static -X main.gitCommit=$(COMMIT) -X main.version=$(VERSION) $(EXTRA_LDFLAGS)"
++GO_BUILD_STATIC := $(GO) build -trimpath $(EXTRA_FLAGS) -tags "$(BUILDTAGS) static_build cgo netgo osusergo"
+ 
+ GPG_KEYID ?= asarai@suse.de
+ 
+ .DEFAULT: runc
+ 
+ runc:
+-	$(GO_BUILD) -o runc .
++	mkdir -p ${BEP_DIR}
++	$(GO_BUILD) $(BEP_FLAG) -buildid=IdByIsula -o runc .
+ 
+ all: runc recvtty sd-helper seccompagent
+ 
+ recvtty sd-helper seccompagent:
+-	$(GO_BUILD) -o contrib/cmd/$@/$@ ./contrib/cmd/$@
++	$(GO_BUILD) $(BEP_FLAG) -buildid=IdByIsula -o contrib/cmd/$@/$@ ./contrib/cmd/$@
++
++LD_FLAGS='-buildid=none -tmpdir=/tmp/bep-runc -linkmode=external -extldflags=-Wl,-z,relro,-z,now \
++	 -extldflags -static -X main.gitCommit=$(COMMIT) -X main.version=$(VERSION) $(EXTRA_LDFLAGS) \
++	 '
+ 
+ static:
+-	$(GO_BUILD_STATIC) -o runc .
++	rm -rf /tmp/bep-runc && mkdir /tmp/bep-runc
++	CGO_ENABLED=1 \
++	CGO_CFLAGS="-fstack-protector-strong -fPIE -D_FORTIFY_SOURCE=2 -O2" \
++	CGO_CPPFLAGS="-fstack-protector-strong -fPIE -D_FORTIFY_SOURCE=2 -O2" \
++	CGO_LDFLAGS_ALLOW='-Wl,-z,relro,-z,now' \
++	CGO_LDFLAGS="-Wl,-z,relro,-z,now -Wl,-z,noexecstack" \
++	$(GO_BUILD_STATIC) -buildmode=pie  -ldflags $(LD_FLAGS) -o runc .
+ 
+ releaseall: RELEASE_ARGS := "-a arm64 -a armel -a armhf -a ppc64le -a s390x"
+ releaseall: release
+@@ -70,6 +83,9 @@ runcimage:
+ 
+ test: unittest integration rootlessintegration
+ 
++check:
++	go test -v ./libcontainer
++
+ localtest: localunittest localintegration localrootlessintegration
+ 
+ unittest: runcimage
+-- 
+2.30.0
+
