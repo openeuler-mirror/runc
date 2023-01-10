@@ -1,0 +1,30 @@
+From 68d83f90cbca399aa4797b8d63eaa1fa35b1ad30 Mon Sep 17 00:00:00 2001
+From: zhongjiawei <zhongjiawei1@huawei.com>
+Date: Thu, 5 Jan 2023 16:24:00 +0800
+Subject: [PATCH] runc: reduce max number of retries to 10
+
+[Changelog]:when killing containers in D state, now runc will do
+100 retries, which leads that containerd blocks for 10 seconds.
+[Author]:Ruilin Li
+---
+ delete.go | 4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/delete.go b/delete.go
+index 746b0df..799c2a7 100644
+--- a/delete.go
++++ b/delete.go
+@@ -14,8 +14,8 @@ import (
+ )
+ 
+ func killContainer(container libcontainer.Container) error {
+-	_ = container.Signal(unix.SIGKILL, false)
+-	for i := 0; i < 100; i++ {
++	container.Signal(unix.SIGKILL, false)
++	for i := 0; i < 10; i++ {
+ 		time.Sleep(100 * time.Millisecond)
+ 		if err := container.Signal(unix.Signal(0), false); err != nil {
+ 			destroy(container)
+-- 
+2.30.0
+

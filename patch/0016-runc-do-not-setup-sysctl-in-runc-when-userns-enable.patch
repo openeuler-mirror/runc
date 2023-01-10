@@ -1,0 +1,33 @@
+From 6b4045a28504aaefdb8c1e9abe6b4ad7c445684a Mon Sep 17 00:00:00 2001
+From: zhongjiawei <zhongjiawei1@huawei.com>
+Date: Thu, 5 Jan 2023 16:33:42 +0800
+Subject: [PATCH] runc:do not setup sysctl in runc when userns enable
+
+---
+ libcontainer/standard_init_linux.go | 10 ++++++----
+ 1 file changed, 6 insertions(+), 4 deletions(-)
+
+diff --git a/libcontainer/standard_init_linux.go b/libcontainer/standard_init_linux.go
+index 0dd51b2..b202ba9 100644
+--- a/libcontainer/standard_init_linux.go
++++ b/libcontainer/standard_init_linux.go
+@@ -130,10 +130,12 @@ func (l *linuxStandardInit) Init() error {
+ 	if err := apparmor.ApplyProfile(l.config.AppArmorProfile); err != nil {
+ 		return fmt.Errorf("unable to apply apparmor profile: %w", err)
+ 	}
+-
+-	for key, value := range l.config.Config.Sysctl {
+-		if err := writeSystemProperty(key, value); err != nil {
+-			return err
++	// when userns enabled, write to sysctl will fail, let docker-hooks do this job
++	if len(l.config.Config.UidMappings) == 0 && len(l.config.Config.GidMappings) == 0 {
++		for key, value := range l.config.Config.Sysctl {
++			if err := writeSystemProperty(key, value); err != nil {
++				return err
++			}
+ 		}
+ 	}
+ 	for _, path := range l.config.Config.ReadonlyPaths {
+-- 
+2.30.0
+

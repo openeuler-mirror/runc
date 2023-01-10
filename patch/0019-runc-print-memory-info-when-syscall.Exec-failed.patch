@@ -1,0 +1,76 @@
+From 5159ecfcc9180dd47e843818844c59cb9284d662 Mon Sep 17 00:00:00 2001
+From: zhongjiawei <zhongjiawei1@huawei.com>
+Date: Thu, 5 Jan 2023 16:36:48 +0800
+Subject: [PATCH] runc: print memory info when syscall.Exec failed
+
+---
+ libcontainer/container_linux.go     |  1 +
+ libcontainer/standard_init_linux.go | 33 ++++++++++++++++++++++++++++-
+ 2 files changed, 33 insertions(+), 1 deletion(-)
+
+diff --git a/libcontainer/container_linux.go b/libcontainer/container_linux.go
+index 10890c1..5ef5a9a 100644
+--- a/libcontainer/container_linux.go
++++ b/libcontainer/container_linux.go
+@@ -355,6 +355,7 @@ func (c *linuxContainer) start(process *Process) (retErr error) {
+ 	}
+ 
+ 	if err := parent.start(); err != nil {
++		printCgroupInfo(c.config.Cgroups.Path)
+ 		return fmt.Errorf("unable to start container process: %w", err)
+ 	}
+ 
+diff --git a/libcontainer/standard_init_linux.go b/libcontainer/standard_init_linux.go
+index b202ba9..8a60501 100644
+--- a/libcontainer/standard_init_linux.go
++++ b/libcontainer/standard_init_linux.go
+@@ -3,8 +3,10 @@ package libcontainer
+ import (
+ 	"errors"
+ 	"fmt"
++	"io/ioutil"
+ 	"os"
+ 	"os/exec"
++	"path/filepath"
+ 	"strconv"
+ 	"time"
+ 
+@@ -274,5 +276,34 @@ func (l *linuxStandardInit) Init() error {
+ 		return err
+ 	}
+ 
+-	return system.Exec(name, l.config.Args[0:], os.Environ())
++	if err := system.Exec(name, l.config.Args[0:], os.Environ()); err != nil {
++		printCgroupInfo("")
++		return err
++	}
++	return nil
+ }
++
++func printCgroupInfo(path string) {
++	cgroupRoot := "/sys/fs/cgroup"
++	infoFileList := []string{
++		"/proc/meminfo",
++		"/sys/fs/cgroup/memory/memory.stat",
++		filepath.Join(cgroupRoot, "files", path, "files.limit"),
++		filepath.Join(cgroupRoot, "files", path, "files.usage"),
++		filepath.Join(cgroupRoot, "pids", path, "pids.max"),
++		filepath.Join(cgroupRoot, "pids", path, "pids.current"),
++		filepath.Join(cgroupRoot, "memory", path, "memory.usage_in_bytes"),
++		filepath.Join(cgroupRoot, "memory", path, "memory.limit_in_bytes"),
++		filepath.Join(cgroupRoot, "memory", path, "memory.stat"),
++		filepath.Join(cgroupRoot, "cpu", path, "cpu.stat"),
++	}
++	for _, file := range infoFileList {
++		printFileContent(file)
++	}
++}
++
++func printFileContent(path string) {
++	output, err := ioutil.ReadFile(path)
++	logrus.Infof("content read from %s: %s, err: %v", path, string(output), err)
++}
++
+-- 
+2.30.0
+

@@ -1,0 +1,25 @@
+From 845b54fcaa8cd843034479b2019eaa9ee5faaf75 Mon Sep 17 00:00:00 2001
+From: zhongjiawei <zhongjiawei1@huawei.com>
+Date: Thu, 5 Jan 2023 16:30:36 +0800
+Subject: [PATCH] runc: modify minHookTimeOut
+
+---
+ libcontainer/configs/config.go | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/libcontainer/configs/config.go b/libcontainer/configs/config.go
+index 9076846..540bcdb 100644
+--- a/libcontainer/configs/config.go
++++ b/libcontainer/configs/config.go
+@@ -12,7 +12,7 @@ import (
+ )
+ 
+ const (
+-	minHookTimeOut     = 1 * time.Second
++	minHookTimeOut     = 0
+ 	defaultHookTimeOut = 5 * time.Second
+ 	maxHookTimeOut     = 120 * time.Second
+ 	//the runc default timeout is 120s, so set the defaultWarnTime to 80% of the default timeout.
+-- 
+2.30.0
+

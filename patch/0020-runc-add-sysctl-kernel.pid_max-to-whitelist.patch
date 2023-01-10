@@ -1,0 +1,24 @@
+From af158d403f0395ee93636a6a77b4d37adbef6ee1 Mon Sep 17 00:00:00 2001
+From: zhongjiawei <zhongjiawei1@huawei.com>
+Date: Thu, 5 Jan 2023 16:37:39 +0800
+Subject: [PATCH] runc:add sysctl kernel.pid_max to whitelist
+
+---
+ libcontainer/configs/validate/validator.go | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/libcontainer/configs/validate/validator.go b/libcontainer/configs/validate/validator.go
+index 627621a..3647aa2 100644
+--- a/libcontainer/configs/validate/validator.go
++++ b/libcontainer/configs/validate/validator.go
+@@ -171,6 +171,7 @@ func (v *ConfigValidator) sysctl(config *configs.Config) error {
+ 		"kernel.shmmax":          true,
+ 		"kernel.shmmni":          true,
+ 		"kernel.shm_rmid_forced": true,
++		"kernel.pid_max":         true,
+ 	}
+ 
+ 	var (
+-- 
+2.30.0
+
