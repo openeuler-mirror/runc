@@ -1,0 +1,205 @@
+From 3b2a80f599b6339f4823fc634a7f9096f7c2a5d8 Mon Sep 17 00:00:00 2001
+From: zhongjiawei <zhongjiawei1@huawei.com>
+Date: Tue, 17 Jan 2023 15:14:06 +0800
+Subject: [PATCH] runc:modify linuxcontainer starttime uint64 type tobe string
+
+---
+ libcontainer/container.go            |  2 +-
+ libcontainer/container_linux.go      |  4 ++--
+ libcontainer/container_linux_test.go | 14 +++++++-------
+ libcontainer/process_linux.go        |  6 +++---
+ libcontainer/restored_process.go     |  8 ++++----
+ libcontainer/system/proc.go          |  4 ++--
+ 6 files changed, 19 insertions(+), 19 deletions(-)
+
+diff --git a/libcontainer/container.go b/libcontainer/container.go
+index 300c952..1759e4c 100644
+--- a/libcontainer/container.go
++++ b/libcontainer/container.go
+@@ -55,7 +55,7 @@ type BaseState struct {
+ 	InitProcessPid int `json:"init_process_pid"`
+ 
+ 	// InitProcessStartTime is the init process start time in clock cycles since boot time.
+-	InitProcessStartTime uint64 `json:"init_process_start"`
++	InitProcessStartTime string `json:"init_process_start"`
+ 
+ 	// Created is the unix timestamp for the creation time of the container in UTC
+ 	Created time.Time `json:"created"`
+diff --git a/libcontainer/container_linux.go b/libcontainer/container_linux.go
+index 10890c1..1fc8fec 100644
+--- a/libcontainer/container_linux.go
++++ b/libcontainer/container_linux.go
+@@ -44,7 +44,7 @@ type linuxContainer struct {
+ 	initPath             string
+ 	initArgs             []string
+ 	initProcess          parentProcess
+-	initProcessStartTime uint64
++	initProcessStartTime string
+ 	criuPath             string
+ 	newuidmapPath        string
+ 	newgidmapPath        string
+@@ -2000,7 +2000,7 @@ func (c *linuxContainer) isPaused() (bool, error) {
+ 
+ func (c *linuxContainer) currentState() (*State, error) {
+ 	var (
+-		startTime           uint64
++		startTime           string
+ 		externalDescriptors []string
+ 		pid                 = -1
+ 	)
+diff --git a/libcontainer/container_linux_test.go b/libcontainer/container_linux_test.go
+index 3eb6e5a..1a4b027 100644
+--- a/libcontainer/container_linux_test.go
++++ b/libcontainer/container_linux_test.go
+@@ -102,7 +102,7 @@ func (m *mockIntelRdtManager) GetCgroups() (*configs.Cgroup, error) {
+ 
+ type mockProcess struct {
+ 	_pid    int
+-	started uint64
++	started string
+ }
+ 
+ func (m *mockProcess) terminate() error {
+@@ -113,7 +113,7 @@ func (m *mockProcess) pid() int {
+ 	return m._pid
+ }
+ 
+-func (m *mockProcess) startTime() (uint64, error) {
++func (m *mockProcess) startTime() (string, error) {
+ 	return m.started, nil
+ }
+ 
+@@ -157,7 +157,7 @@ func TestGetContainerPids(t *testing.T) {
+ 		},
+ 		initProcess: &mockProcess{
+ 			_pid:    1,
+-			started: 10,
++			started: "10",
+ 		},
+ 		initProcessStartTime: stat.StartTime,
+ 	}
+@@ -244,7 +244,7 @@ func TestGetContainerState(t *testing.T) {
+ 		},
+ 		initProcess: &mockProcess{
+ 			_pid:    pid,
+-			started: 10,
++			started: "010",
+ 		},
+ 		cgroupManager: &mockCgroupManager{
+ 			pids: []int{1, 2, 3},
+@@ -275,8 +275,8 @@ func TestGetContainerState(t *testing.T) {
+ 	if state.InitProcessPid != pid {
+ 		t.Fatalf("expected pid %d but received %d", pid, state.InitProcessPid)
+ 	}
+-	if state.InitProcessStartTime != 10 {
+-		t.Fatalf("expected process start time 10 but received %d", state.InitProcessStartTime)
++	if state.InitProcessStartTime != "010" {
++		t.Fatalf("expected process start time 10 but received %s", state.InitProcessStartTime)
+ 	}
+ 	paths := state.CgroupPaths
+ 	if paths == nil {
+@@ -368,7 +368,7 @@ func TestGetContainerStateAfterUpdate(t *testing.T) {
+ 		t.Fatalf("expected pid %d but received %d", pid, state.InitProcessPid)
+ 	}
+ 	if state.InitProcessStartTime != stat.StartTime {
+-		t.Fatalf("expected process start time %d but received %d", stat.StartTime, state.InitProcessStartTime)
++		t.Fatalf("expected process start time %s but received %s", stat.StartTime, state.InitProcessStartTime)
+ 	}
+ 	if state.Config.Cgroups.Resources.Memory != 1024 {
+ 		t.Fatalf("expected Memory to be 1024 but received %q", state.Config.Cgroups.Memory)
+diff --git a/libcontainer/process_linux.go b/libcontainer/process_linux.go
+index 75d05b7..1124cf5 100644
+--- a/libcontainer/process_linux.go
++++ b/libcontainer/process_linux.go
+@@ -38,7 +38,7 @@ type parentProcess interface {
+ 	wait() (*os.ProcessState, error)
+ 
+ 	// startTime returns the process start time.
+-	startTime() (uint64, error)
++	startTime() (string, error)
+ 	signal(os.Signal) error
+ 	externalDescriptors() []string
+ 	setExternalDescriptors(fds []string)
+@@ -65,7 +65,7 @@ type setnsProcess struct {
+ 	initProcessPid  int
+ }
+ 
+-func (p *setnsProcess) startTime() (uint64, error) {
++func (p *setnsProcess) startTime() (string, error) {
+ 	stat, err := system.Stat(p.pid())
+ 	return stat.StartTime, err
+ }
+@@ -641,7 +641,7 @@ func (p *initProcess) terminate() error {
+ 	return err
+ }
+ 
+-func (p *initProcess) startTime() (uint64, error) {
++func (p *initProcess) startTime() (string, error) {
+ 	stat, err := system.Stat(p.pid())
+ 	return stat.StartTime, err
+ }
+diff --git a/libcontainer/restored_process.go b/libcontainer/restored_process.go
+index cdffbd3..6f26e75 100644
+--- a/libcontainer/restored_process.go
++++ b/libcontainer/restored_process.go
+@@ -24,7 +24,7 @@ func newRestoredProcess(cmd *exec.Cmd, fds []string) (*restoredProcess, error) {
+ 
+ type restoredProcess struct {
+ 	cmd              *exec.Cmd
+-	processStartTime uint64
++	processStartTime string
+ 	fds              []string
+ }
+ 
+@@ -58,7 +58,7 @@ func (p *restoredProcess) wait() (*os.ProcessState, error) {
+ 	return st, nil
+ }
+ 
+-func (p *restoredProcess) startTime() (uint64, error) {
++func (p *restoredProcess) startTime() (string, error) {
+ 	return p.processStartTime, nil
+ }
+ 
+@@ -83,7 +83,7 @@ func (p *restoredProcess) forwardChildLogs() chan error {
+ // a persisted state.
+ type nonChildProcess struct {
+ 	processPid       int
+-	processStartTime uint64
++	processStartTime string
+ 	fds              []string
+ }
+ 
+@@ -103,7 +103,7 @@ func (p *nonChildProcess) wait() (*os.ProcessState, error) {
+ 	return nil, errors.New("restored process cannot be waited on")
+ }
+ 
+-func (p *nonChildProcess) startTime() (uint64, error) {
++func (p *nonChildProcess) startTime() (string, error) {
+ 	return p.processStartTime, nil
+ }
+ 
+diff --git a/libcontainer/system/proc.go b/libcontainer/system/proc.go
+index 774443e..768a16e 100644
+--- a/libcontainer/system/proc.go
++++ b/libcontainer/system/proc.go
+@@ -62,7 +62,7 @@ type Stat_t struct {
+ 
+ 	// StartTime is the number of clock ticks after system boot (since
+ 	// Linux 2.6).
+-	StartTime uint64
++	StartTime string
+ }
+ 
+ // Stat returns a Stat_t instance for the specified process.
+@@ -118,7 +118,7 @@ func parseStat(data string) (stat Stat_t, err error) {
+ 	if i < 0 {
+ 		return stat, fmt.Errorf("invalid stat data (too short): %q", data)
+ 	}
+-	stat.StartTime, err = strconv.ParseUint(data[first:first+i], 10, 64)
++	stat.StartTime = data[first:first+i]
+ 	if err != nil {
+ 		return stat, fmt.Errorf("invalid stat data (bad start time): %w", err)
+ 	}
+-- 
+2.30.0
+
