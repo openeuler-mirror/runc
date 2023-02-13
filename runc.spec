@@ -4,7 +4,7 @@
 
 Name: docker-runc
 Version: 1.0.0.rc3
-Release: 308
+Release: 309
 Summary: runc is a CLI tool for spawning and running containers according to the OCI specification.
 
 License: ASL 2.0
@@ -33,6 +33,10 @@ cp %{SOURCE4} .
 
 %install
 sh ./apply-patch 
+%ifarch loongarch64
+patch -p1 < %{_builddir}/patch/0001-SIGUNUSED-is-nolonger-support-for-loongarch.patch
+patch -p1 < %{_builddir}/patch/0001-update-sys-to-v0.4.0-to-support-loong64.patch
+%endif
 
 mkdir -p .gopath/src/github.com/opencontainers
 export GOPATH=`pwd`/.gopath
@@ -53,6 +57,9 @@ install -p -m 755 runc $RPM_BUILD_ROOT/%{_bindir}/runc
 %{_bindir}/runc
 
 %changelog
+* Thu Jan 5 2023 Wenlong Zhang<zhangwenlong@loongson.cn> - 1.0.0.rc3-309
+- add loongarch support for runc
+
 * Sat Dec 17 2022 zhongjiawei<zhongjiawei1@huawei.com> - 1.0.0.rc3-308
 - Type:bugfix
 - CVE:NA
