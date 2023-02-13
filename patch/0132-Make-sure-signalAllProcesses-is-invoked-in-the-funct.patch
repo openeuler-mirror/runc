@@ -1,0 +1,40 @@
+From 45ca12f818735aa098a4d832d5b23c480adc37ce Mon Sep 17 00:00:00 2001
+From: Shukui Yang <keloyangsk@gmail.com>
+Date: Fri, 12 Jul 2019 09:54:52 +0800
+Subject: [PATCH] Make sure signalAllProcesses is invoked in the function of
+ destroy
+
+It's expect that signalAllProcesses is invoked when container shares
+pid namespace. share pid ns contains the following conditions:
+
+{
+    // no specify pid ns
+}
+{
+    "type": "pid",
+    "path": "/proc/${num}/ns/pid"
+}
+
+Signed-off-by: Shukui Yang <jryangshukui@jd.com>
+Signed-off-by: Shukui Yang <keloyangsk@gmail.com>
+---
+ libcontainer/state_linux.go | 3 ++-
+ 1 file changed, 2 insertions(+), 1 deletion(-)
+
+diff --git a/libcontainer/state_linux.go b/libcontainer/state_linux.go
+index b570a244..c77d4f2d 100644
+--- a/libcontainer/state_linux.go
++++ b/libcontainer/state_linux.go
+@@ -38,7 +38,8 @@ type containerState interface {
+ }
+ 
+ func destroy(c *linuxContainer) error {
+-	if !c.config.Namespaces.Contains(configs.NEWPID) {
++	if !c.config.Namespaces.Contains(configs.NEWPID) ||
++		c.config.Namespaces.PathOf(configs.NEWPID) != "" {
+ 		if err := signalAllProcesses(c.cgroupManager, syscall.SIGKILL); err != nil {
+ 			logrus.Warn(err)
+ 		}
+-- 
+2.33.0
+
