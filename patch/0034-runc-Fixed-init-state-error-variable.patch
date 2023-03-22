@@ -1,0 +1,29 @@
+From ab18f1e6bf59d651889a9483f45f0e88368669c9 Mon Sep 17 00:00:00 2001
+From: Vipul Newaskar <vipulnewaskar7@gmail.com>
+Date: Sun, 13 Nov 2022 23:46:12 +0530
+Subject: [PATCH 2/2] Fixed init state error variable
+
+Init State Error message was using the err variable instead of uerr, which has been fixed now.
+The error message should not show "nil" now.
+
+Signed-off-by: Vipul Newaskar <vipulnewaskar7@gmail.com>
+---
+ libcontainer/process_linux.go | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/libcontainer/process_linux.go b/libcontainer/process_linux.go
+index 1124cf54..3b453ccd 100644
+--- a/libcontainer/process_linux.go
++++ b/libcontainer/process_linux.go
+@@ -555,7 +555,7 @@ func (p *initProcess) start() (retErr error) {
+ 			// procRun sync.
+ 			state, uerr := p.container.updateState(p)
+ 			if uerr != nil {
+-				return fmt.Errorf("unable to store init state: %w", err)
++				return fmt.Errorf("unable to store init state: %w", uerr)
+ 			}
+ 			p.container.initProcessStartTime = state.InitProcessStartTime
+ 
+-- 
+2.33.0
+
